@@ -1,0 +1,69 @@
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
+#include <QMainWindow>
+#include "define.h"
+#include "qcustomplot.h"
+#include "mycustomplot.h"
+
+namespace Ui {
+class MainWindow;
+}
+
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
+
+    void hideForm();
+    //前台绘制波形曲线图
+    //QcpData2D-36通道电磁数据
+    //windowStart-图表开始点,windowEnd-图表结束点
+    //plotBoard - MyCustomPlot画板
+    //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
+    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, int windowStart, int windowEnd, MyCustomPlot *&plotBoard, int axis);
+    //多窗体设置函数  //Num窗体数量
+    void setMutiWindow(int Num);
+
+    //窗口控件
+    //多窗体窗口控件(窗体1在ui中)  //QcpText//窗体1
+    MyCustomPlot *QcpText_2; //窗体2
+    MyCustomPlot *QcpText_3; //窗体3
+    MyCustomPlot *QcpText_4; //窗体4
+
+signals:
+    void modelDataRequest(QString& qsfilePath,int startPos,int offset,int directFlag);
+
+private slots:
+    int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
+
+    void on_plotWindow_triggered();
+
+    void on_nextPageBtn_clicked();
+
+    void on_previousPageBtn_clicked();
+
+    void on_projectManage_triggered();
+
+    void on_userManage_triggered();
+
+    void on_login_triggered();
+
+    void on_logout_triggered();
+
+    void on_windowNumSet_triggered();
+
+private:
+    Ui::MainWindow *ui;
+
+public:
+    projectConfigure *CprjConfig = nullptr;
+    windowDisplay *CwindowDisp = nullptr;
+};
+
+Q_DECLARE_METATYPE(QCPGraphData)
+
+#endif // MAINWINDOW_H

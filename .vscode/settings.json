@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "qapplication": "cpp",
+        "qiodevice": "cpp",
+        "cmath": "cpp",
+        "array": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "qelapsedtimer": "cpp"
+    }
+}
