@@ -270,9 +270,8 @@ void dataService::setMainWindow(MainWindow *exMainW)
     m_exMainW = exMainW;
 }
 
-void dataService::handleModelDataRequest(QString& qsfilePath,int startPos, int offset, int directFlag)
+void dataService::handleModelDataRequest(QString& qsfilePath,int startPos, int offset)
 {
-    Q_UNUSED(directFlag)
     m_dataRwLock.lockForWrite();
     //使用swap代替clear清除，可避免内存溢出问题
     QMap<int,QVector<dataModel>>().swap(m_dataModel);

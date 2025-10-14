@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
     qRegisterMetaType<QMap<int, QVector<QVector<QCPGraphData>>>>("QMap<int, QVector<QVector<QCPGraphData>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
     connect(plotProcess::getInstance(),&plotProcess::plotDataReady,this,&MainWindow::handlePlotDataReady);
+    connect(ui->QcpText,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
     if(nullptr == CprjConfig)
     {
         CprjConfig = new projectConfigure;
@@ -28,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     //初始化代码
+    ui->QcpText->setInteractions(QCP::iRangeZoom);
+
     CwindowDisp->windPlotType[0] = 2;
     QcpText_2 = nullptr;
     QcpText_3 = nullptr;
@@ -298,6 +301,18 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
     return 0;
 }
 
+void MainWindow::handleSig_wheelEvent()
+{
+   qDebug()<<"x轴最小值"<<ceil(ui->QcpText->xAxis->range().lower);
+   qDebug()<<"x轴最大值"<<floor(ui->QcpText->xAxis->range().upper);
+   CwindowDisp->startPos = static_cast<int>(ceil(ui->QcpText->xAxis->range().lower));
+   CwindowDisp->offset = static_cast<int>(floor(ui->QcpText->xAxis->range().upper)-CwindowDisp->startPos);
+
+   QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+   emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
+
+}
+
 void MainWindow::on_plotWindow_triggered()
 {
     ui->stackedWidget->setCurrentIndex(0);
@@ -341,7 +356,7 @@ void MainWindow::on_plotWindow_triggered()
         }
         //------------------------------------------
 
-        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset,1);
+        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
         CwindowDisp->bFirstPlot = false;
     }
 }
@@ -353,14 +368,14 @@ void MainWindow::on_nextPageBtn_clicked()
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)
     {
-        emit modelDataRequest(qsfilePath,0,CwindowDisp->startPos+CwindowDisp->offset,1);
+        emit modelDataRequest(qsfilePath,0,CwindowDisp->startPos+CwindowDisp->offset);
     }
     else if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset < 0)
     {
-        emit modelDataRequest(qsfilePath,0,0,1);
+        emit modelDataRequest(qsfilePath,0,0);
     }
     else {
-        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset,1);
+        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
     }
 }
 
@@ -371,14 +386,14 @@ void MainWindow::on_previousPageBtn_clicked()
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)
     {
-        emit modelDataRequest(qsfilePath,0,CwindowDisp->startPos+CwindowDisp->offset,0);
+        emit modelDataRequest(qsfilePath,0,CwindowDisp->startPos+CwindowDisp->offset);
     }
     else if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset < 0)
     {
-        emit modelDataRequest(qsfilePath,0,0,0);
+        emit modelDataRequest(qsfilePath,0,0);
     }
     else {
-        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset,0);
+        emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
     }
 }
 

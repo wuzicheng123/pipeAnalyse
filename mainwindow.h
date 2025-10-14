@@ -35,10 +35,11 @@ public:
     MyCustomPlot *QcpText_4; //窗体4
 
 signals:
-    void modelDataRequest(QString& qsfilePath,int startPos,int offset,int directFlag);
+    void modelDataRequest(QString& qsfilePath,int startPos,int offset);
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
+    void handleSig_wheelEvent();
 
     void on_plotWindow_triggered();
 

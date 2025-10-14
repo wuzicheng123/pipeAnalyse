@@ -7,6 +7,7 @@
 #include <QVector>
 #include <QMap>
 #include <QFile>
+#include <cmath>
 
 class dataModel
 {

@@ -32,9 +32,8 @@ signals:
 
 public slots:
     //startPos是窗体显示的开始位置（划分刻度为整体）
-    //向前向后翻页标志位directFlag,0-向前，1-向后
     //由于mainwindow中限制，startPos取值范围：>=0
-    void handleModelDataRequest(QString& qsfilePath, int startPos, int offset, int directFlag);
+    void handleModelDataRequest(QString& qsfilePath, int startPos, int offset);
 
 private:
     explicit dataService(QObject *parent = nullptr);
