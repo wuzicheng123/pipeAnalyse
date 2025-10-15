@@ -143,14 +143,30 @@ int dataService::readDataFromBinAll(QString qsfilePath, QMap<int, QVector<dataMo
     }
 }
 
-int dataService::readDataFromBinByOffset(QString qsfilePath, QMap<int, QVector<dataModel> > &qmdataModel, int startPos, int offset, int &differ)
+int dataService::readDataFromBinByOffset(QString qsfilePath, QMap<int, QVector<dataModel> > &qmdataModel, qint64 startPos, qint64 offset, qint64 &differ)
 {
     QFile file(qsfilePath);
     if (file.open(QIODevice::ReadOnly)) {
         // 打开成功
         // 变量声明
-        const int bufferSize = 268 * offset; // 需要查询：offset对应的字节数
-        const int startBytes = 268 * startPos + 20;
+        //根据总帧数确定缓冲区
+        qint64 bufferSize = 0; // 需要查询：offset对应的字节数
+        if(1 == offset)
+        {
+            bufferSize = 268;
+        }
+        else if(offset > 1 && offset < 1024*4)
+        {
+            bufferSize = 268*offset;
+        }
+        else if(offset >= 1024*4)
+        {
+            bufferSize = 268*1024*4;
+        }
+        else {
+            bufferSize = 0;
+        }
+        const qint64 startBytes = 268 * startPos + 20;
         differ = 0;
 
         QByteArray buffer;
@@ -162,13 +178,9 @@ int dataService::readDataFromBinByOffset(QString qsfilePath, QMap<int, QVector<d
         file.seek(startBytes);
         buffer = file.read(bufferSize);
         currentBytes = buffer.size();
-        if(currentBytes < bufferSize)
-        {
-            differ = (bufferSize-currentBytes)/268;
-        }
-        else {
-            differ = 0;
-        }
+
+        differ = offset - currentBytes/268;
+
 
         if(0 == currentBytes)
         {
@@ -270,16 +282,16 @@ void dataService::setMainWindow(MainWindow *exMainW)
     m_exMainW = exMainW;
 }
 
-void dataService::handleModelDataRequest(QString& qsfilePath,int startPos, int offset)
+void dataService::handleModelDataRequest(QString& qsfilePath,qint64 startPos, qint64 offset)
 {
     m_dataRwLock.lockForWrite();
     //使用swap代替clear清除，可避免内存溢出问题
     QMap<int,QVector<dataModel>>().swap(m_dataModel);
-    int differ = 0;
+    qint64 differ = 0;
     //查询前一帧数据，用于预处理操作
     QMap<int,QVector<dataModel>>oneMap;
-    int differ2Pre = 0;
-    int initialStartPos = startPos;
+    qint64 differ2Pre = 0;
+    qint64 initialStartPos = startPos;
 
     //前一帧所在文件和所在位置
     int fileNumber = m_exMainW->CprjConfig->fileNameVec.size();

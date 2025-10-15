@@ -24,7 +24,7 @@ public:
     //windowStart-图表开始点,windowEnd-图表结束点
     //plotBoard - MyCustomPlot画板
     //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
-    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, int windowStart, int windowEnd, MyCustomPlot *&plotBoard, int axis);
+    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
 
@@ -35,7 +35,8 @@ public:
     MyCustomPlot *QcpText_4; //窗体4
 
 signals:
-    void modelDataRequest(QString& qsfilePath,int startPos,int offset);
+    //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定）
+    void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);

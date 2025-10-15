@@ -158,9 +158,9 @@ class windowDisplay
 {
 public:
     bool bFirstPlot;//第一次绘制
-    int startPos;//窗体显示波形数据起始点（帧数）
-    int offset;//窗体显示波形数据长度
-    int pageOffset;//点击翻页按钮偏移量
+    qint64 startPos;//窗体显示波形数据起始点（帧数）（相对于文件的位置，0为起点）
+    qint64 offset;//窗体显示波形所需数据长度
+    qint64 pageOffset;//点击翻页按钮偏移量
     int windNum;//同屏窗体显示数量 1，2，3，4
     //windPlotType[0]对应图一，[1]对应图二。。。
     //windPlotType[0]:1-X,2-Y,3-Z,4-Vortex

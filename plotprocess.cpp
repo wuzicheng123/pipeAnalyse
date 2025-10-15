@@ -74,7 +74,7 @@ int plotProcess::dataModel2PlotData(QMap<int, QVector<dataModel> > &qmDataModel,
 
 //从大变小，然后恢复，区间内的值：  16320  -16000      2*16383.5-16000=16767
 //从小变大，然后恢复，区间内的值：  -16000 16320       16320-2*16383.5=-16477
-void plotProcess::dataPreProcessing(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData,QMap<int, QVector<QVector<QCPGraphData> > > &qmPreCPData,int startPos)
+void plotProcess::dataPreProcessing(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData,QMap<int, QVector<QVector<QCPGraphData> > > &qmPreCPData,qint64 startPos)
 {
     double thresholdforXY = 6000;
     double thresholdforZ = 3000;
@@ -509,7 +509,7 @@ void plotProcess::initalPlotProcess()
     }
 }
 
-void plotProcess::handledataModel2PlotProcess(QMap<int, QVector<dataModel> > &qmDataModel,QMap<int,QVector<dataModel>>onePreData,int startPos)
+void plotProcess::handledataModel2PlotProcess(QMap<int, QVector<dataModel> > &qmDataModel,QMap<int,QVector<dataModel>>onePreData,qint64 startPos)
 {
     //添加读写锁
     dataService::getInstance()->m_dataRwLock.lockForRead();

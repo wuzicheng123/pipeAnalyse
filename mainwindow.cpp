@@ -56,7 +56,7 @@ void MainWindow::hideForm()
     ui->stackedWidget->hide();
 }
 
-void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, int windowStart, int windowEnd,MyCustomPlot *& plotBoard,int axis)
+void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd,MyCustomPlot *& plotBoard,int axis)
 {
     int RowSize = QcpData2D.size();
     //查找36个通道的最大最小值
@@ -305,12 +305,36 @@ void MainWindow::handleSig_wheelEvent()
 {
    qDebug()<<"x轴最小值"<<ceil(ui->QcpText->xAxis->range().lower);
    qDebug()<<"x轴最大值"<<floor(ui->QcpText->xAxis->range().upper);
-   CwindowDisp->startPos = static_cast<int>(ceil(ui->QcpText->xAxis->range().lower));
-   CwindowDisp->offset = static_cast<int>(floor(ui->QcpText->xAxis->range().upper)-CwindowDisp->startPos);
+   qint64 xLower = static_cast<qint64>(ceil(ui->QcpText->xAxis->range().lower));
+   qint64 xUpper = static_cast<qint64>(floor(ui->QcpText->xAxis->range().upper));
 
-   QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
-   emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
+   if(xLower <= 0)
+   {
+       CwindowDisp->startPos = 0;
+   }
+   else {
+       CwindowDisp->startPos = xLower;
+   }
 
+   if(xLower < 0 && xUpper > 0)
+   {
+       CwindowDisp->offset = xUpper;
+   }
+   else if(xLower >0 && xUpper>0)
+   {
+       CwindowDisp->offset = xUpper - xLower;
+   }
+   else {
+       CwindowDisp->offset = 0;
+   }
+
+   //超出Int范围不处理
+   qint64 iSum = CwindowDisp->startPos + CwindowDisp->offset;
+   if(iSum<INT_MAX && iSum>0)
+   {
+       QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+       emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
+   }
 }
 
 void MainWindow::on_plotWindow_triggered()

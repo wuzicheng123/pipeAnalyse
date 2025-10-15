@@ -21,19 +21,20 @@ public:
     //读取bin文件中全部数据
     int readDataFromBinAll(QString qsfilePath, QMap<int, QVector<dataModel> >& qmdataModel);
     //根据偏移量读取数据（鼠标操作，按键操作）  //differ = offset - 当前文件只剩下的值，因此还需去下一个文件读differ个帧（1帧=268字节）
+    //offset 所求数据总帧数
     //differ=0时读取结束，否则循环读
     //return 0-成功 -1-打开文件失败  -2-下一个文件读
-    int readDataFromBinByOffset(QString qsfilePath, QMap<int, QVector<dataModel> >& qmdataModel, int startPos, int offset, int &differ);
+    int readDataFromBinByOffset(QString qsfilePath, QMap<int, QVector<dataModel> >& qmdataModel, qint64 startPos, qint64 offset, qint64 &differ);
     //获取主窗体
     void setMainWindow(MainWindow* exMainW);
 
 signals:
-    void dataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel,QMap<int,QVector<dataModel>>onePreData,int startPos);
+    void dataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel,QMap<int,QVector<dataModel>>onePreData,qint64 startPos);
 
 public slots:
     //startPos是窗体显示的开始位置（划分刻度为整体）
     //由于mainwindow中限制，startPos取值范围：>=0
-    void handleModelDataRequest(QString& qsfilePath, int startPos, int offset);
+    void handleModelDataRequest(QString& qsfilePath, qint64 startPos, qint64 offset);
 
 private:
     explicit dataService(QObject *parent = nullptr);

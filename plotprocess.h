@@ -23,7 +23,7 @@ public:
     //z轴的正上限8191.75，下限-8191.75
     //startPos大于0时，qmPreCPData为前一帧数据，否则为空
     //针对Hall数据的预处理
-    void dataPreProcessing(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, QMap<int, QVector<QVector<QCPGraphData> > > &qmPreCPData, int startPos);
+    void dataPreProcessing(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, QMap<int, QVector<QVector<QCPGraphData> > > &qmPreCPData, qint64 startPos);
     //dataPreProcessing中的子函数。功能：处理一条通道中的其中一点。包含参数：前一点、当前点、状态标志、判断阈值
     void dataPreProcessOnePoint(QCPGraphData& preData,QCPGraphData& currentData,quint8& transFlag,double& threshold,double& hallUpperLimit,double& hallLowerLimit);
     //dataModel2PlotData中每个探头的解析子函数   每个探头的数据oneModelVec
@@ -38,7 +38,7 @@ signals:
     int plotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
 
 public slots:
-    void handledataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel, QMap<int, QVector<dataModel> > onePreData, int startPos);
+    void handledataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel, QMap<int, QVector<dataModel> > onePreData, qint64 startPos);
 
 private:
     explicit plotProcess(QObject *parent = nullptr);
