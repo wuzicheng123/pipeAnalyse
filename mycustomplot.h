@@ -12,14 +12,21 @@ public:
 private:
     virtual void mouseReleaseEvent(QMouseEvent* event) override;
     virtual void wheelEvent(QWheelEvent* event) override;
+    virtual void mouseMoveEvent(QMouseEvent* event) override;
+    virtual void mousePressEvent(QMouseEvent* event) override;
 
-    QTimer* m_timer;
+    //滚轮缩放逻辑参数
+    QTimer* m_timer; //去抖动
+
+    //按键拖拽逻辑参数
+    QTimer* m_dragTimer;
 
 signals:
-    void sig_wheelEvent();
+    void sig_wheelEvent(); //鼠标滚轮和拖拽改变视角可通用此信号
 
 public slots:
     void handleTimeout();
+    void handleTimeoutBydrag();
 };
 
 #endif // MYCUSTOMPLOT_H

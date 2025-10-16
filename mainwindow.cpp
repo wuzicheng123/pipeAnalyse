@@ -100,6 +100,15 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
     double yRangeMax = ymax + 35 + 1; //上下留1的余量
     double yRangeMin = ymin - 1;
     plotBoard->yAxis->setRange(yRangeMin,yRangeMax);
+    if(0 == CwindowDisp->yLower && 0 == CwindowDisp->yUpper)
+    {
+        CwindowDisp->yLower = -4;
+        CwindowDisp->yUpper = 38;
+        plotBoard->yAxis->setRange(CwindowDisp->yLower,CwindowDisp->yUpper);
+    }
+    else {
+        plotBoard->yAxis->setRange(CwindowDisp->yLower,CwindowDisp->yUpper);
+    }
     //使用data指针
     QPen pen;
     pen.setColor(QColor(0,204,0));
@@ -307,33 +316,43 @@ void MainWindow::handleSig_wheelEvent()
    qDebug()<<"x轴最大值"<<floor(ui->QcpText->xAxis->range().upper);
    qint64 xLower = static_cast<qint64>(ceil(ui->QcpText->xAxis->range().lower));
    qint64 xUpper = static_cast<qint64>(floor(ui->QcpText->xAxis->range().upper));
+   qint64 yLower = static_cast<qint64>(ceil(ui->QcpText->yAxis->range().lower));
+   qint64 yUpper = static_cast<qint64>(floor(ui->QcpText->yAxis->range().upper));
+
+   CwindowDisp->startPos = xLower;
+   CwindowDisp->offset = xUpper - CwindowDisp->startPos;
+   CwindowDisp->yLower = yLower;
+   CwindowDisp->yUpper = yUpper;
+
+   qint64 startPosInFile = 0;
+   qint64 offsetInfile = 0;
 
    if(xLower <= 0)
    {
-       CwindowDisp->startPos = 0;
+       startPosInFile = 0;
    }
    else {
-       CwindowDisp->startPos = xLower;
+       startPosInFile = xLower;
    }
 
    if(xLower < 0 && xUpper > 0)
    {
-       CwindowDisp->offset = xUpper;
+       offsetInfile = xUpper;
    }
    else if(xLower >0 && xUpper>0)
    {
-       CwindowDisp->offset = xUpper - xLower;
+       offsetInfile = xUpper - xLower;
    }
    else {
-       CwindowDisp->offset = 0;
+       offsetInfile = 0;
    }
 
    //超出Int范围不处理
-   qint64 iSum = CwindowDisp->startPos + CwindowDisp->offset;
-   if(iSum<INT_MAX && iSum>0)
+   qint64 iSum = startPosInFile + offsetInfile;
+   if(iSum>0)
    {
        QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
-       emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
+       emit modelDataRequest(qsfilePath,startPosInFile,offsetInfile);
    }
 }
 
@@ -387,7 +406,7 @@ void MainWindow::on_plotWindow_triggered()
 
 void MainWindow::on_nextPageBtn_clicked()
 {
-    CwindowDisp->startPos += CwindowDisp->pageOffset;
+    CwindowDisp->startPos += CwindowDisp->offset;
     QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)
@@ -405,7 +424,7 @@ void MainWindow::on_nextPageBtn_clicked()
 
 void MainWindow::on_previousPageBtn_clicked()
 {
-    CwindowDisp->startPos -= CwindowDisp->pageOffset;
+    CwindowDisp->startPos -= CwindowDisp->offset;
     QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)

@@ -9,7 +9,6 @@ MyCustomPlot::MyCustomPlot(QWidget *parent):
 void MyCustomPlot::mouseReleaseEvent(QMouseEvent *event)
 {
     QCustomPlot::mouseReleaseEvent(event);
-    qDebug()<<"11111";
 }
 
 void MyCustomPlot::wheelEvent(QWheelEvent *event)
@@ -31,8 +30,28 @@ void MyCustomPlot::wheelEvent(QWheelEvent *event)
     }
 }
 
+void MyCustomPlot::mouseMoveEvent(QMouseEvent *event)
+{
+    QCustomPlot::mouseMoveEvent(event);
+        qDebug()<<event->button();
+
+        qDebug()<<event->type();
+
+        qDebug()<<event->pos().x();
+        qDebug()<<event->pos().y();
+}
+
+void MyCustomPlot::mousePressEvent(QMouseEvent *event)
+{
+
+}
+
 void MyCustomPlot::handleTimeout()
 {
     emit sig_wheelEvent();
-    qDebug()<<"22222";
+}
+
+void MyCustomPlot::handleTimeoutBydrag()
+{
+
 }

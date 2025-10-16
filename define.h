@@ -158,8 +158,10 @@ class windowDisplay
 {
 public:
     bool bFirstPlot;//第一次绘制
-    qint64 startPos;//窗体显示波形数据起始点（帧数）（相对于文件的位置，0为起点）
+    qint64 startPos;//窗体显示波形数据起始点（可以为负数）
     qint64 offset;//窗体显示波形所需数据长度
+    qint64 yLower;//y轴窗体显示区间下界
+    qint64 yUpper;//y轴窗体显示区间上界
     qint64 pageOffset;//点击翻页按钮偏移量
     int windNum;//同屏窗体显示数量 1，2，3，4
     //windPlotType[0]对应图一，[1]对应图二。。。
@@ -173,6 +175,8 @@ public:
         bFirstPlot = true;
         startPos = 0;
         offset = 2000;
+        yLower = 0;
+        yUpper = 0;
         pageOffset = 1500;
         windNum = 1;
         for(int i=0;i<4;i++)
