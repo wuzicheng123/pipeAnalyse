@@ -29,7 +29,8 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     //初始化代码
-    ui->QcpText->setInteractions(QCP::iRangeZoom);
+    ui->QcpText->setInteractions(QCP::iRangeZoom | QCP::iSelectPlottables);
+    connect(ui->QcpText,&MyCustomPlot::plottableClick,this,&MainWindow::handlePlottableClick);
 
     CwindowDisp->windPlotType[0] = 2;
     QcpText_2 = nullptr;
@@ -310,15 +311,8 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
     return 0;
 }
 
-void MainWindow::handleSig_wheelEvent()
+void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
 {
-   qDebug()<<"x轴最小值"<<ceil(ui->QcpText->xAxis->range().lower);
-   qDebug()<<"x轴最大值"<<floor(ui->QcpText->xAxis->range().upper);
-   qint64 xLower = static_cast<qint64>(ceil(ui->QcpText->xAxis->range().lower));
-   qint64 xUpper = static_cast<qint64>(floor(ui->QcpText->xAxis->range().upper));
-   qint64 yLower = static_cast<qint64>(ceil(ui->QcpText->yAxis->range().lower));
-   qint64 yUpper = static_cast<qint64>(floor(ui->QcpText->yAxis->range().upper));
-
    CwindowDisp->startPos = xLower;
    CwindowDisp->offset = xUpper - CwindowDisp->startPos;
    CwindowDisp->yLower = yLower;
@@ -353,6 +347,7 @@ void MainWindow::handleSig_wheelEvent()
    {
        QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
        emit modelDataRequest(qsfilePath,startPosInFile,offsetInfile);
+       //未来多窗口显示触发改动在此处
    }
 }
 
@@ -466,5 +461,22 @@ void MainWindow::on_logout_triggered()
 
 void MainWindow::on_windowNumSet_triggered()
 {
+
+}
+
+void MainWindow::handlePlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
+{
+    QString graphName = plottable->name();
+    if(graphName.size() > 6)
+    {
+        QString graphIdStr = graphName.mid(6);
+        int graphId = graphIdStr.toInt()-1;
+        MyCustomPlot* qMyCP = qobject_cast<MyCustomPlot*>(sender());
+        const QCPGraphData *ghd = qMyCP->graph(graphId)->data()->at(dataIndex);
+        int probeNum = (graphId+1)/6+1;
+        int sensorNum = graphId%6+1;
+        qDebug()<<"x: "<<ghd->key<<"    "<<"y: "<<ghd->value<<" "<<"探头："<<probeNum;
+//        QString qToolInfo = "";
+    }
 
 }

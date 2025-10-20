@@ -20,9 +20,11 @@ private:
 
     //按键拖拽逻辑参数
     QTimer* m_dragTimer;
+    bool m_dragging;
+    QPoint m_prePoint; //0.5s前上一个点
 
 signals:
-    void sig_wheelEvent(); //鼠标滚轮和拖拽改变视角可通用此信号
+    void sig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper); //鼠标滚轮和拖拽改变视角可通用此信号
 
 public slots:
     void handleTimeout();

@@ -41,7 +41,6 @@ signals:
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
-    void handleSig_wheelEvent();
 
     void on_plotWindow_triggered();
 
@@ -58,6 +57,11 @@ private slots:
     void on_logout_triggered();
 
     void on_windowNumSet_triggered();
+
+    void handlePlottableClick(QCPAbstractPlottable* plottable,int dataIndex,QMouseEvent* event);
+
+public slots:
+    void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);
 
 private:
     Ui::MainWindow *ui;
