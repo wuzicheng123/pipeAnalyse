@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
     qRegisterMetaType<QMap<int, QVector<QVector<QCPGraphData>>>>("QMap<int, QVector<QVector<QCPGraphData>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
     connect(plotProcess::getInstance(),&plotProcess::plotDataReady,this,&MainWindow::handlePlotDataReady);
-    connect(ui->QcpText,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+    connect(ui->QcpText_1,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
     if(nullptr == CprjConfig)
     {
         CprjConfig = new projectConfigure;
@@ -29,8 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     //初始化代码
-    ui->QcpText->setInteractions(QCP::iRangeZoom | QCP::iSelectPlottables);
-    connect(ui->QcpText,&MyCustomPlot::plottableClick,this,&MainWindow::handlePlottableClick);
+    ui->QcpText_1->setInteractions(QCP::iRangeZoom);
 
     CwindowDisp->windPlotType[0] = 2;
     QcpText_2 = nullptr;
@@ -244,6 +243,16 @@ void MainWindow::setMutiWindow(int Num)
     }
 }
 
+void MainWindow::setCPtittle(MyCustomPlot *&plotboard, QString strTitle)
+{
+    QCPTextElement *title = new QCPTextElement(plotboard);
+    title->setText(strTitle);
+    title->setFont(QFont("Arial",18,QFont::Bold));
+    title->setTextColor(Qt::black);
+    plotboard->plotLayout()->insertRow(0);
+    plotboard->plotLayout()->addElement(0,0,title);
+}
+
 int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData)
 {
     dataService::getInstance()->m_dataRwLock.lockForRead();
@@ -265,7 +274,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
                 if(qmCPData.find(1) != qmCPData.end())
                 {
                     QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText,1);
+                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,1);
                 }
                 break;
             }
@@ -273,7 +282,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
                 if(qmCPData.find(2) != qmCPData.end())
                 {
                     QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText,2);
+                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,2);
                 }
                 break;
             }
@@ -281,7 +290,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
                 if(qmCPData.find(3) != qmCPData.end())
                 {
                     QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText,3);
+                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,3);
                 }
                 break;
             }
@@ -289,7 +298,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
                 if(qmCPData.find(4) != qmCPData.end())
                 {
                     QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText,4);
+                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,4);
                 }
                 break;
             }
@@ -394,6 +403,10 @@ void MainWindow::on_plotWindow_triggered()
         }
         //------------------------------------------
 
+        //设置图表标题
+        setCPtittle(ui->QcpText_1,"霍尔X轴");
+        //------------------------------------------
+
         emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
         CwindowDisp->bFirstPlot = false;
     }
@@ -464,19 +477,3 @@ void MainWindow::on_windowNumSet_triggered()
 
 }
 
-void MainWindow::handlePlottableClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
-{
-    QString graphName = plottable->name();
-    if(graphName.size() > 6)
-    {
-        QString graphIdStr = graphName.mid(6);
-        int graphId = graphIdStr.toInt()-1;
-        MyCustomPlot* qMyCP = qobject_cast<MyCustomPlot*>(sender());
-        const QCPGraphData *ghd = qMyCP->graph(graphId)->data()->at(dataIndex);
-        int probeNum = (graphId+1)/6+1;
-        int sensorNum = graphId%6+1;
-        qDebug()<<"x: "<<ghd->key<<"    "<<"y: "<<ghd->value<<" "<<"探头："<<probeNum;
-//        QString qToolInfo = "";
-    }
-
-}

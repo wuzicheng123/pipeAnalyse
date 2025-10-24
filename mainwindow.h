@@ -27,6 +27,8 @@ public:
     void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
+    //设置图表标题
+    void setCPtittle(MyCustomPlot*& plotboard, QString strTitle);
 
     //窗口控件
     //多窗体窗口控件(窗体1在ui中)  //QcpText//窗体1
@@ -57,8 +59,6 @@ private slots:
     void on_logout_triggered();
 
     void on_windowNumSet_triggered();
-
-    void handlePlottableClick(QCPAbstractPlottable* plottable,int dataIndex,QMouseEvent* event);
 
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);

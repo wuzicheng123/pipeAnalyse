@@ -98,7 +98,7 @@
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="MyCustomPlot" name="QcpText" native="true">
+         <widget class="MyCustomPlot" name="QcpText_1" native="true">
           <property name="enabled">
            <bool>true</bool>
           </property>

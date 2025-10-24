@@ -61,6 +61,7 @@ private:
     //key-1,2,3对应x，y，z轴，QVector是大小为36的数组，表示36个通道。
     //0是代表使用原始数据，1是做从大变小预处理偏移计算，2是做从小变大预处理偏移计算
     QMap<int,QVector<quint8>>m_preProcessFlag;
+public:
     double hallUpperLimitXY;
     double hallLowerLimitXY;
     double hallUpperLimitZ;
