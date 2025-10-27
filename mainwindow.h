@@ -5,6 +5,7 @@
 #include "define.h"
 #include "qcustomplot.h"
 #include "mycustomplot.h"
+#include "windownumsetdialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -35,6 +36,7 @@ public:
     MyCustomPlot *QcpText_2; //窗体2
     MyCustomPlot *QcpText_3; //窗体3
     MyCustomPlot *QcpText_4; //窗体4
+    windowNumSetDialog *windowNumSetDlg; //多窗体设置页面
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
@@ -43,6 +45,7 @@ signals:
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
+    void handleWindowNumSetData(int windNum,int* windPlotType,int* windSensorType);
 
     void on_plotWindow_triggered();
 

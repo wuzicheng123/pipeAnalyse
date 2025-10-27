@@ -170,7 +170,7 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
                     oneTracer.tracer = new QCPItemTracer(this);
                     oneTracer.tracer->setGraph(graph);
                     oneTracer.tracer->setInterpolating(false);
-                    oneTracer.tracer->setStyle(QCPItemTracer::tsPlus);
+                    oneTracer.tracer->setStyle(QCPItemTracer::tsCrosshair);
                     oneTracer.tracer->setSize(6);
                     oneTracer.tracer->setVisible(oneTracer.isActive);
 

@@ -32,7 +32,8 @@ SOURCES += \
     dataservice.cpp \
     plotprocess.cpp \
     mycustomplot.cpp \
-    msgbox.cpp
+    msgbox.cpp \
+    windownumsetdialog.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -42,10 +43,12 @@ HEADERS += \
     dataservice.h \
     plotprocess.h \
     mycustomplot.h \
-    msgbox.h
+    msgbox.h \
+    windownumsetdialog.h
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    windownumsetdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->setWindowTitle("管道分析软件");
 
     qRegisterMetaType<QMap<int, QVector<QVector<QCPGraphData>>>>("QMap<int, QVector<QVector<QCPGraphData>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
@@ -31,10 +32,11 @@ MainWindow::MainWindow(QWidget *parent) :
     //初始化代码
     ui->QcpText_1->setInteractions(QCP::iRangeZoom);
 
-    CwindowDisp->windPlotType[0] = 2;
+    CwindowDisp->windSensorType[0] = 2;
     QcpText_2 = nullptr;
     QcpText_3 = nullptr;
     QcpText_4 = nullptr;
+    windowNumSetDlg = nullptr;
 }
 
 MainWindow::~MainWindow()
@@ -44,10 +46,18 @@ MainWindow::~MainWindow()
     if(nullptr != CprjConfig)
     {
         delete  CprjConfig;
+        CprjConfig = nullptr;
     }
     if(nullptr != CwindowDisp)
     {
         delete  CwindowDisp;
+        CwindowDisp = nullptr;
+    }
+    if(nullptr != windowNumSetDlg)
+    {
+        disconnect(windowNumSetDlg,&windowNumSetDialog::windowNumSetData,this,&MainWindow::handleWindowNumSetData);
+        delete windowNumSetDlg;
+        windowNumSetDlg = nullptr;
     }
 }
 
@@ -268,7 +278,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
     //绘制磁力曲线
     if(1 == CwindowDisp->windNum)
     {
-        switch (CwindowDisp->windPlotType[0])   //一个窗口
+        switch (CwindowDisp->windSensorType[0])   //一个窗口
         {
             case 1:{    //X轴
                 if(qmCPData.find(1) != qmCPData.end())
@@ -318,6 +328,27 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
     return 0;
+}
+
+void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *windSensorType)
+{
+    CwindowDisp->windNum = windNum;
+    for(int i=0;i<4;i++)
+    {
+        CwindowDisp->windPlotType[i]=windPlotType[i];
+        CwindowDisp->windSensorType[i]=windSensorType[i];
+        qDebug()<<"第"<<i<<"张图"<<" "<<"显示方式:"<<CwindowDisp->windPlotType[i]<<" "<<"传感器:"<<CwindowDisp->windSensorType[i];
+    }
+    if(nullptr != windPlotType)
+    {
+        delete[] windPlotType;
+        windPlotType = nullptr;
+    }
+    if(nullptr != windSensorType)
+    {
+        delete[] windSensorType;
+        windSensorType = nullptr;
+    }
 }
 
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
@@ -474,6 +505,13 @@ void MainWindow::on_logout_triggered()
 
 void MainWindow::on_windowNumSet_triggered()
 {
-
+    if(nullptr == windowNumSetDlg)
+    {
+        windowNumSetDlg = new windowNumSetDialog(this);
+        connect(windowNumSetDlg,&windowNumSetDialog::windowNumSetData,this,&MainWindow::handleWindowNumSetData);
+        windowNumSetDlg->exec();
+    }
+    else {
+        windowNumSetDlg->exec();
+    }
 }
-

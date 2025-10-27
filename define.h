@@ -164,9 +164,13 @@ public:
     qint64 yUpper;//y轴窗体显示区间上界
     qint64 pageOffset;//点击翻页按钮偏移量
     int windNum;//同屏窗体显示数量 1，2，3，4
+    //windSensorType[0]对应图一，[1]对应图二。。。
+    //windSensorType[0]:1-X,2-Y,3-Z,4-Vortex
+    int windSensorType[4];//绘制传感器内容
     //windPlotType[0]对应图一，[1]对应图二。。。
-    //windPlotType[0]:1-X,2-Y,3-Z,4-Vortex
+    //windPlotType[0]:1-曲线图,2-灰度图,3-彩色图
     int windPlotType[4];//绘制内容
+
     //缩放比例scale（放大缩小影响scale）
     //offset，pageOffset和scale大小相关
     int penWidth;//绘图线宽
@@ -181,6 +185,7 @@ public:
         windNum = 1;
         for(int i=0;i<4;i++)
         {
+            windSensorType[i]=0;
             windPlotType[i]=0;
         }
         penWidth = 1;
