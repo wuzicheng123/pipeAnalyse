@@ -73,13 +73,13 @@ void MyCustomPlot::wheelEvent(QWheelEvent *event)
         m_timer = new QTimer;
         connect(m_timer,&QTimer::timeout,this,&MyCustomPlot::handleTimeout);
         m_timer->setSingleShot(true);
-        m_timer->start(400);
+        m_timer->start(300);
     }
     else {
         if(m_timer->isActive())
         {}
         else {
-            m_timer->start(400);
+            m_timer->start(300);
         }
     }
 }
@@ -94,13 +94,13 @@ void MyCustomPlot::mouseMoveEvent(QMouseEvent *event)
             m_dragTimer = new QTimer;
             connect(m_dragTimer,&QTimer::timeout,this,&MyCustomPlot::handleTimeoutBydrag);
             m_dragTimer->setSingleShot(true);
-            m_dragTimer->start(500);
+            m_dragTimer->start(300);
         }
         else {
             if(m_dragTimer->isActive())
             {}
             else {
-                m_dragTimer->start(500);
+                m_dragTimer->start(300);
             }
         }
     }

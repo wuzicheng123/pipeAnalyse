@@ -26,6 +26,9 @@ public:
     //plotBoard - MyCustomPlot画板
     //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
     void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis);
+    //handlePlotDataReady中的子函数
+    //sensorType绘图传感器类型，qmCPData绘制数据，plotBoard画板
+    void plotbySensorType(int sensorType,QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData,MyCustomPlot*& plotBoard);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
     //设置图表标题

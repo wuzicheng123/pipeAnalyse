@@ -32,7 +32,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //初始化代码
     ui->QcpText_1->setInteractions(QCP::iRangeZoom);
 
-    CwindowDisp->windSensorType[0] = 2;
+    CwindowDisp->windNum = 1;
+    CwindowDisp->windSensorType[0] = 1;
+    CwindowDisp->windPlotType[0] = 1;
     QcpText_2 = nullptr;
     QcpText_3 = nullptr;
     QcpText_4 = nullptr;
@@ -135,6 +137,45 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
         dataContainer->set(QcpData2D[i],true);
     }
     plotBoard->replot();
+}
+
+void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard)
+{
+    switch (sensorType)   //一个窗口
+    {
+        case 1:{    //X轴
+            if(qmCPData.find(1) != qmCPData.end())
+            {
+                QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1);
+            }
+            break;
+        }
+        case 2:{    //Y轴
+            if(qmCPData.find(2) != qmCPData.end())
+            {
+                QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2);
+            }
+            break;
+        }
+        case 3:{    //Z轴
+            if(qmCPData.find(3) != qmCPData.end())
+            {
+                QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3);
+            }
+            break;
+        }
+        case 4:{    //VORTEX
+            if(qmCPData.find(4) != qmCPData.end())
+            {
+                QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4);
+            }
+            break;
+        }
+    }
 }
 
 void MainWindow::setMutiWindow(int Num)
@@ -276,54 +317,26 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
         }
     }
     //绘制磁力曲线
-    if(1 == CwindowDisp->windNum)
+    QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
+    vecMyCP.append(ui->QcpText_1);
+    vecMyCP.append(QcpText_2);
+    vecMyCP.append(QcpText_3);
+    vecMyCP.append(QcpText_4);
+    //根据窗口数量，循环刷新
+    for(int i=0;i<CwindowDisp->windNum;i++)
     {
-        switch (CwindowDisp->windSensorType[0])   //一个窗口
+        if(1 == CwindowDisp->windPlotType[i]) //曲线图
         {
-            case 1:{    //X轴
-                if(qmCPData.find(1) != qmCPData.end())
-                {
-                    QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,1);
-                }
-                break;
-            }
-            case 2:{    //Y轴
-                if(qmCPData.find(2) != qmCPData.end())
-                {
-                    QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,2);
-                }
-                break;
-            }
-            case 3:{    //Z轴
-                if(qmCPData.find(3) != qmCPData.end())
-                {
-                    QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,3);
-                }
-                break;
-            }
-            case 4:{    //VORTEX
-                if(qmCPData.find(4) != qmCPData.end())
-                {
-                    QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
-                    plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,ui->QcpText_1,4);
-                }
-                break;
-            }
+            plotbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i]);
         }
-    }
-    else if(2 == CwindowDisp->windNum)  //两个窗口
-    {
+        else if(2 == CwindowDisp->windPlotType[i]) //灰度图
+        {
 
-    }
-    else if(3 == CwindowDisp->windNum)  //三个窗口
-    {
+        }
+        else if(3 == CwindowDisp->windPlotType[i]) //热度图
+        {
 
-    }
-    else {  //四个窗口
-
+        }
     }
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
@@ -337,8 +350,8 @@ void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *win
     {
         CwindowDisp->windPlotType[i]=windPlotType[i];
         CwindowDisp->windSensorType[i]=windSensorType[i];
-        qDebug()<<"第"<<i<<"张图"<<" "<<"显示方式:"<<CwindowDisp->windPlotType[i]<<" "<<"传感器:"<<CwindowDisp->windSensorType[i];
     }
+    setMutiWindow(CwindowDisp->windNum);
     if(nullptr != windPlotType)
     {
         delete[] windPlotType;
