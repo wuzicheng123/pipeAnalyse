@@ -18,8 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     qRegisterMetaType<QMap<int, QVector<QVector<QCPGraphData>>>>("QMap<int, QVector<QVector<QCPGraphData>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
-    connect(plotProcess::getInstance(),&plotProcess::plotDataReady,this,&MainWindow::handlePlotDataReady);
-    connect(ui->QcpText_1,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+    connect(this,&MainWindow::plotCacheDataRequest,plotProcess::getInstance(),&plotProcess::handleplotCacheDataRequest);
+    connect(plotProcess::getInstance(),&plotProcess::plotDataReady,this,&MainWindow::handlePlotDataReady); 
     if(nullptr == CprjConfig)
     {
         CprjConfig = new projectConfigure;
@@ -31,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //初始化代码
     ui->QcpText_1->setInteractions(QCP::iRangeZoom);
+    connect(ui->QcpText_1,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
 
     CwindowDisp->windNum = 1;
     CwindowDisp->windSensorType[0] = 1;
@@ -186,16 +187,19 @@ void MainWindow::setMutiWindow(int Num)
             ui->gridLayout->addWidget(ui->infowidget,0,0,1,1);
             if(nullptr != QcpText_2)
             {
+                disconnect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_2;
                 QcpText_2 = nullptr;
             }
             if(nullptr != QcpText_3)
             {
+                disconnect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_3;
                 QcpText_3 = nullptr;
             }
             if(nullptr != QcpText_4)
             {
+                disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -206,11 +210,13 @@ void MainWindow::setMutiWindow(int Num)
             ui->gridLayout->addWidget(ui->infowidget,0,0,1,1);
             if(nullptr != QcpText_3)
             {
+                disconnect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_3;
                 QcpText_3 = nullptr;
             }
             if(nullptr != QcpText_4)
             {
+                disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -220,6 +226,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setObjectName(QString::fromUtf8("QcpText_2"));
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
+                QcpText_2->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
@@ -231,6 +239,7 @@ void MainWindow::setMutiWindow(int Num)
             ui->gridLayout->addWidget(ui->infowidget,0,0,1,1);
             if(nullptr != QcpText_4)
             {
+                disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -240,6 +249,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setObjectName(QString::fromUtf8("QcpText_2"));
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
+                QcpText_2->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
@@ -250,6 +261,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_3->setObjectName(QString::fromUtf8("QcpText_3"));
                 QcpText_3->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_3,3,0,1,1);
+                QcpText_3->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_3,3,0,1,1);
@@ -265,6 +278,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setObjectName(QString::fromUtf8("QcpText_2"));
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,1,1,1,1);
+                QcpText_2->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_2,1,1,1,1);
@@ -275,6 +290,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_3->setObjectName(QString::fromUtf8("QcpText_3"));
                 QcpText_3->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_3,2,0,1,1);
+                QcpText_3->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_3,2,0,1,1);
@@ -285,6 +302,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_4->setObjectName(QString::fromUtf8("QcpText_4"));
                 QcpText_4->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_4,2,1,1,1);
+                QcpText_4->setInteractions(QCP::iRangeZoom);
+                connect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
                 ui->gridLayout->addWidget(QcpText_4,2,1,1,1);
@@ -292,16 +311,57 @@ void MainWindow::setMutiWindow(int Num)
             break;
         }
     }
+    //设置画板标题
+    QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
+    vecMyCP.append(ui->QcpText_1);
+    vecMyCP.append(QcpText_2);
+    vecMyCP.append(QcpText_3);
+    vecMyCP.append(QcpText_4);
+    for(int i=0;i<Num;i++)
+    {
+        if(1 == CwindowDisp->windPlotType[i]) //曲线图
+        {
+            switch (CwindowDisp->windSensorType[i]) {
+                case 1:
+                {
+                    setCPtittle(vecMyCP[i],"霍尔X轴");
+                    break;
+                }
+                case 2:
+                {
+                    setCPtittle(vecMyCP[i],"霍尔Y轴");
+                    break;
+                }
+                case 3:
+                {
+                    setCPtittle(vecMyCP[i],"霍尔Z轴");
+                    break;
+                }
+                case 4:
+                {
+                    setCPtittle(vecMyCP[i],"涡流");
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void MainWindow::setCPtittle(MyCustomPlot *&plotboard, QString strTitle)
 {
-    QCPTextElement *title = new QCPTextElement(plotboard);
-    title->setText(strTitle);
-    title->setFont(QFont("Arial",18,QFont::Bold));
-    title->setTextColor(Qt::black);
-    plotboard->plotLayout()->insertRow(0);
-    plotboard->plotLayout()->addElement(0,0,title);
+    QCPTextElement* title = dynamic_cast<QCPTextElement*>(plotboard->plotLayout()->element(0,0));
+    if(title)
+    {
+        title->setText(strTitle);
+    }
+    else {
+        title = new QCPTextElement(plotboard);
+        title->setText(strTitle);
+        title->setFont(QFont("Arial",18,QFont::Bold));
+        title->setTextColor(Qt::black);
+        plotboard->plotLayout()->insertRow(0);
+        plotboard->plotLayout()->addElement(0,0,title);
+    }
 }
 
 int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData)
@@ -333,7 +393,7 @@ int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > 
         {
 
         }
-        else if(3 == CwindowDisp->windPlotType[i]) //热度图
+        else if(3 == CwindowDisp->windPlotType[i]) //彩色图
         {
 
         }
@@ -352,6 +412,7 @@ void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *win
         CwindowDisp->windSensorType[i]=windSensorType[i];
     }
     setMutiWindow(CwindowDisp->windNum);
+    emit plotCacheDataRequest();
     if(nullptr != windPlotType)
     {
         delete[] windPlotType;
@@ -447,10 +508,7 @@ void MainWindow::on_plotWindow_triggered()
         }
         //------------------------------------------
 
-        //设置图表标题
-        setCPtittle(ui->QcpText_1,"霍尔X轴");
-        //------------------------------------------
-
+        setMutiWindow(CwindowDisp->windNum);
         emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
         CwindowDisp->bFirstPlot = false;
     }

@@ -39,6 +39,7 @@ signals:
 
 public slots:
     void handledataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel, QMap<int, QVector<dataModel> > onePreData, qint64 startPos);
+    void handleplotCacheDataRequest();
 
 private:
     explicit plotProcess(QObject *parent = nullptr);

@@ -45,6 +45,7 @@ signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
     //添加y轴的范围
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
+    void plotCacheDataRequest();
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);

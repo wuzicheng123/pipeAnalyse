@@ -528,6 +528,14 @@ void plotProcess::handledataModel2PlotProcess(QMap<int, QVector<dataModel> > &qm
     emit plotDataReady(m_CPData);
 }
 
+void plotProcess::handleplotCacheDataRequest()
+{
+    if(!m_CPData.empty())
+    {
+        emit plotDataReady(m_CPData);
+    }
+}
+
 plotProcess::plotProcess(QObject *parent) : QObject(parent)
 {
     qRegisterMetaType<QMap<int,QVector<dataModel>>>("QMap<int,QVector<dataModel>>&");
