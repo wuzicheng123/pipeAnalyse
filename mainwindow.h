@@ -6,6 +6,8 @@
 #include "qcustomplot.h"
 #include "mycustomplot.h"
 #include "windownumsetdialog.h"
+#include "logindlg.h"
+#include "databaseworker.h"
 
 namespace Ui {
 class MainWindow;
@@ -33,6 +35,8 @@ public:
     void setMutiWindow(int Num);
     //设置图表标题
     void setCPtittle(MyCustomPlot*& plotboard, QString strTitle);
+    //初始化数据库
+    void initialDatabase();
 
     //窗口控件
     //多窗体窗口控件(窗体1在ui中)  //QcpText//窗体1
@@ -40,16 +44,19 @@ public:
     MyCustomPlot *QcpText_3; //窗体3
     MyCustomPlot *QcpText_4; //窗体4
     windowNumSetDialog *windowNumSetDlg; //多窗体设置页面
+    loginDlg *m_loginDlg;//登录界面
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
     //添加y轴的范围
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
     void plotCacheDataRequest();
+    void initalWinNum();
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
     void handleWindowNumSetData(int windNum,int* windPlotType,int* windSensorType);
+    void handleLoginResult(QString id, QString name, QString password, QString permission);
 
     void on_plotWindow_triggered();
 
@@ -72,10 +79,12 @@ public slots:
 
 private:
     Ui::MainWindow *ui;
+    databaseWorker *m_dbWorker;
 
 public:
     projectConfigure *CprjConfig = nullptr;
     windowDisplay *CwindowDisp = nullptr;
+    userModel *CcurrentUserMod = nullptr;
 };
 
 Q_DECLARE_METATYPE(QCPGraphData)

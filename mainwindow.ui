@@ -13,15 +13,83 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">/* Material Design 浅色主题 */
+QMainWindow {
+    background-color: #fafafa;
+}
+
+QWidget {
+    background-color: #fafafa;
+    color: #212121;
+    font-family: &quot;Roboto&quot;, &quot;Microsoft YaHei&quot;;
+    /*font-size: 13px;*/
+}
+
+/* 基础按钮样式 */
+QPushButton {
+    font-family: &quot;Microsoft YaHei&quot;;
+}
+
+/* 使能状态 */
+QPushButton:enabled {
+    background-color: #007acc;
+    color: white;
+}
+
+QPushButton:enabled:hover {
+    background-color: #005a9e;
+}
+
+QPushButton:enabled:pressed {
+    background-color: #004578;
+}
+
+/* 未使能状态 */
+QPushButton:disabled {
+    background-color: #cccccc;
+    color: #666666;
+}
+
+QMenu {
+    background-color: white;
+    border: 1px solid #cccccc;
+    padding: 4px;
+}
+        
+QMenu::item {
+    padding: 4px 20px 4px 20px;
+    border: 1px solid transparent;
+}
+        
+QMenu::item:enabled {
+    color: #333333;
+}
+        
+QMenu::item:disabled {
+    color: #999999;
+    background-color: transparent;
+}
+        
+QMenu::item:enabled:selected {
+    background-color: #0078d4;
+    color: white;
+}
+        
+QMenu::item:enabled:pressed {
+    background-color: #005a9e;
+    color: white;
+}
+        
+QMenu::separator {
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 4px 0px;
+}</string>
+  </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>9</number>
-    </property>
-    <item>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="contextMenuPolicy">
        <enum>Qt::DefaultContextMenu</enum>
@@ -30,7 +98,7 @@
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="plotPage">
        <layout class="QGridLayout" name="gridLayout">
@@ -106,7 +174,113 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="page_2"/>
+      <widget class="QWidget" name="userPage">
+       <layout class="QGridLayout" name="gridLayout_3">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="userLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <family>Roboto,Microsoft YaHei</family>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>用户管理</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QWidget" name="controlwidget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>325</width>
+               <height>13</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="newUser">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>添加</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="editUser">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>修改</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="deleteUser">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>删除</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QTableView" name="userTableView"/>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>

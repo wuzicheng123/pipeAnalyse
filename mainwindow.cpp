@@ -28,10 +28,20 @@ MainWindow::MainWindow(QWidget *parent) :
     {
         CwindowDisp = new windowDisplay;
     }
+    if(nullptr == CcurrentUserMod)
+    {
+        CcurrentUserMod = new userModel;
+    }
 
     //初始化代码
     ui->QcpText_1->setInteractions(QCP::iRangeZoom);
     connect(ui->QcpText_1,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+    //初始部分禁用菜单栏
+    ui->projectManage->setEnabled(false);
+    ui->plotWindow->setEnabled(false);
+    ui->userManage->setEnabled(false);
+    ui->logout->setEnabled(false);
+    ui->windowNumSet->setEnabled(false);
 
     CwindowDisp->windNum = 1;
     CwindowDisp->windSensorType[0] = 1;
@@ -39,7 +49,11 @@ MainWindow::MainWindow(QWidget *parent) :
     QcpText_2 = nullptr;
     QcpText_3 = nullptr;
     QcpText_4 = nullptr;
+    //界面
     windowNumSetDlg = nullptr;
+    m_loginDlg = nullptr;
+
+    m_dbWorker = nullptr;
 }
 
 MainWindow::~MainWindow()
@@ -56,11 +70,23 @@ MainWindow::~MainWindow()
         delete  CwindowDisp;
         CwindowDisp = nullptr;
     }
+    if(nullptr != CcurrentUserMod)
+    {
+        delete  CcurrentUserMod;
+        CcurrentUserMod = nullptr;
+    }
     if(nullptr != windowNumSetDlg)
     {
         disconnect(windowNumSetDlg,&windowNumSetDialog::windowNumSetData,this,&MainWindow::handleWindowNumSetData);
+        disconnect(this,&MainWindow::initalWinNum,windowNumSetDlg,&windowNumSetDialog::handleInitalWinNum);
         delete windowNumSetDlg;
         windowNumSetDlg = nullptr;
+    }
+    if(nullptr != m_loginDlg)
+    {
+        //设置disconnect
+        delete m_loginDlg;
+        m_loginDlg = nullptr;
     }
 }
 
@@ -107,8 +133,8 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
         }
     }
 
-    plotBoard->xAxis->setLabel("距离");
-    plotBoard->yAxis->setLabel("磁场强度");
+    plotBoard->xAxis->setLabel("帧数");
+    plotBoard->yAxis->setLabel("通道");
     plotBoard->xAxis->setRange(windowStart,windowEnd);
     double yRangeMax = ymax + 35 + 1; //上下留1的余量
     double yRangeMin = ymin - 1;
@@ -364,6 +390,22 @@ void MainWindow::setCPtittle(MyCustomPlot *&plotboard, QString strTitle)
     }
 }
 
+void MainWindow::initialDatabase()
+{
+    if(nullptr == m_dbWorker)
+    {
+        QThread* thread = new QThread;
+        m_dbWorker = new databaseWorker;
+        m_dbWorker->moveToThread(thread);
+
+        //连接信号槽
+        connect(m_loginDlg,&loginDlg::loginRequest,m_dbWorker,&databaseWorker::handleLoginRequest);
+        connect(m_dbWorker,&databaseWorker::loginResult,this,&MainWindow::handleLoginResult);
+
+        thread->start();
+    }
+}
+
 int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData)
 {
     dataService::getInstance()->m_dataRwLock.lockForRead();
@@ -422,6 +464,41 @@ void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *win
     {
         delete[] windSensorType;
         windSensorType = nullptr;
+    }
+}
+
+void MainWindow::handleLoginResult(QString id,QString name,QString password,QString permission)
+{
+    if("" == permission)
+    {
+        //弹窗告警
+        msgBox::show("登录异常","用户名或密码错误",2);
+    }
+    else
+    {
+        //使能菜单栏并记录当前用户信息
+        ui->projectManage->setEnabled(true);
+        ui->plotWindow->setEnabled(true);
+        ui->userManage->setEnabled(true);
+        ui->logout->setEnabled(true);
+        ui->windowNumSet->setEnabled(true);
+        CcurrentUserMod->id = id;
+        CcurrentUserMod->name = name;
+        CcurrentUserMod->password = password;
+        CcurrentUserMod->permission = permission;
+        if("管理员" == permission)
+        {
+            ui->newUser->setEnabled(true);
+            ui->editUser->setEnabled(true);
+            ui->deleteUser->setEnabled(true);
+        }
+        //操作员
+        else
+        {
+            ui->newUser->setEnabled(false);
+            ui->editUser->setEnabled(false);
+            ui->deleteUser->setEnabled(false);
+        }
     }
 }
 
@@ -558,20 +635,59 @@ void MainWindow::on_projectManage_triggered()
 
 void MainWindow::on_userManage_triggered()
 {
-    //test
-    setMutiWindow(1);
+    ui->stackedWidget->setCurrentIndex(1);
+    ui->stackedWidget->show();
 }
 
 void MainWindow::on_login_triggered()
 {
-    //test
-    setMutiWindow(3);
+    //打开页面
+    if(nullptr == m_loginDlg)
+    {
+        m_loginDlg = new loginDlg(this);
+        initialDatabase();
+        m_loginDlg->exec();
+    }
+    else {
+        m_loginDlg->exec();
+    }
 }
 
 void MainWindow::on_logout_triggered()
 {
-    //test
-    setMutiWindow(4);
+    ui->projectManage->setEnabled(false);
+    ui->plotWindow->setEnabled(false);
+    ui->userManage->setEnabled(false);
+    ui->logout->setEnabled(false);
+    ui->windowNumSet->setEnabled(false);
+    CcurrentUserMod->id = "";
+    CcurrentUserMod->name = "";
+    CcurrentUserMod->password = "";
+    CcurrentUserMod->permission = "";
+    //画板恢复空白
+    setMutiWindow(1);
+    ui->QcpText_1->clearPlottables();    // 清除所有图形
+    ui->QcpText_1->clearItems();         // 清除所有图项
+    ui->QcpText_1->xAxis->setLabel("");  // 清除X轴标签
+    ui->QcpText_1->yAxis->setLabel("");  // 清除Y轴标签
+    ui->QcpText_1->replot();             // 重绘
+    setCPtittle(ui->QcpText_1,"");
+    CwindowDisp->bFirstPlot = true;
+    CwindowDisp->startPos = 0;
+    CwindowDisp->offset = 2000;
+    CwindowDisp->yLower = 0;
+    CwindowDisp->yUpper = 0;
+    CwindowDisp->pageOffset = 1500;
+    for(int i=0;i<4;i++)
+    {
+        CwindowDisp->windSensorType[i]=0;
+        CwindowDisp->windPlotType[i]=0;
+    }
+    CwindowDisp->windNum = 1;
+    CwindowDisp->windSensorType[0] = 1;
+    CwindowDisp->windPlotType[0] = 1;
+    emit initalWinNum();
+    ui->stackedWidget->hide();
 }
 
 void MainWindow::on_windowNumSet_triggered()
@@ -580,6 +696,7 @@ void MainWindow::on_windowNumSet_triggered()
     {
         windowNumSetDlg = new windowNumSetDialog(this);
         connect(windowNumSetDlg,&windowNumSetDialog::windowNumSetData,this,&MainWindow::handleWindowNumSetData);
+        connect(this,&MainWindow::initalWinNum,windowNumSetDlg,&windowNumSetDialog::handleInitalWinNum);
         windowNumSetDlg->exec();
     }
     else {

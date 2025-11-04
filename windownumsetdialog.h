@@ -22,6 +22,9 @@ private slots:
 
     void on_noButton_clicked();
 
+public slots:
+    void handleInitalWinNum();
+
 private:
     Ui::windowNumSetDialog *ui;
 };

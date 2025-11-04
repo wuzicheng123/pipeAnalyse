@@ -21,6 +21,15 @@ windowNumSetDialog::~windowNumSetDialog()
     delete ui;
 }
 
+void windowNumSetDialog::handleInitalWinNum()
+{
+    ui->sensorType_1->setCurrentIndex(0);
+    ui->sensorType_2->setCurrentIndex(1);
+    ui->sensorType_3->setCurrentIndex(2);
+    ui->sensorType_4->setCurrentIndex(3);
+    ui->windowNumSet->setCurrentIndex(0);
+}
+
 void windowNumSetDialog::on_okButton_clicked()
 {
     int windNum = ui->windowNumSet->currentIndex()+1;

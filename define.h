@@ -192,6 +192,23 @@ public:
     }
 };
 
+//数据库数据模型
+class userModel
+{
+public:
+    QString id;
+    QString name;
+    QString password;
+    QString permission;
+    userModel()
+    {
+        id="";
+        name="";
+        password="";
+        permission="";
+    }
+};
+
 Q_DECLARE_METATYPE(dataModel)
 
 #endif // DEFINE_H

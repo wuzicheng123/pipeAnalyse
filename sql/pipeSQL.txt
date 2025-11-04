@@ -1,0 +1,24 @@
+创建数据库
+CREATE DATABASE pipeanalyse;
+创建用户并指定允许从任何主机连接
+CREATE USER 'pipeanalyse_user'@'%' IDENTIFIED BY '123456';
+GRANT ALL PRIVILEGES ON pipeanalyse.* TO 'pipeanalyse_user'@'%';
+FLUSH PRIVILEGES;
+新建数据库用户登录语句
+mysql -u pipeanalyse_user -p
+新建用户表
+USE pipeAnalyse;
+
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    permission VARCHAR(50) DEFAULT '操作员'
+);
+
+-- 创建索引
+CREATE INDEX idx_name ON users(name);
+
+-- 插入管理员数据
+INSERT INTO users (name, password, permission) VALUES 
+('admin', '123', '管理员');

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
@@ -33,7 +33,10 @@ SOURCES += \
     plotprocess.cpp \
     mycustomplot.cpp \
     msgbox.cpp \
-    windownumsetdialog.cpp
+    windownumsetdialog.cpp \
+    databasepool.cpp \
+    databaseworker.cpp \
+    logindlg.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -44,13 +47,20 @@ HEADERS += \
     plotprocess.h \
     mycustomplot.h \
     msgbox.h \
-    windownumsetdialog.h
+    windownumsetdialog.h \
+    databasepool.h \
+    databaseworker.h \
+    logindlg.h
 
 FORMS += \
         mainwindow.ui \
-    windownumsetdialog.ui
+    windownumsetdialog.ui \
+    logindlg.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    sql/pipeSQL.txt
