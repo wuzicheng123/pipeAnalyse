@@ -36,7 +36,8 @@ SOURCES += \
     windownumsetdialog.cpp \
     databasepool.cpp \
     databaseworker.cpp \
-    logindlg.cpp
+    logindlg.cpp \
+    newuserdlg.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -50,12 +51,14 @@ HEADERS += \
     windownumsetdialog.h \
     databasepool.h \
     databaseworker.h \
-    logindlg.h
+    logindlg.h \
+    newuserdlg.h
 
 FORMS += \
         mainwindow.ui \
     windownumsetdialog.ui \
-    logindlg.ui
+    logindlg.ui \
+    newuserdlg.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

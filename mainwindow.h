@@ -8,6 +8,7 @@
 #include "windownumsetdialog.h"
 #include "logindlg.h"
 #include "databaseworker.h"
+#include <QStandardItemModel>
 
 namespace Ui {
 class MainWindow;
@@ -35,7 +36,7 @@ public:
     void setMutiWindow(int Num);
     //设置图表标题
     void setCPtittle(MyCustomPlot*& plotboard, QString strTitle);
-    //初始化数据库
+    //初始化数据库及数据库后台线程
     void initialDatabase();
 
     //窗口控件
@@ -45,6 +46,7 @@ public:
     MyCustomPlot *QcpText_4; //窗体4
     windowNumSetDialog *windowNumSetDlg; //多窗体设置页面
     loginDlg *m_loginDlg;//登录界面
+    QStandardItemModel *userTableModel;
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
@@ -52,11 +54,15 @@ signals:
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
     void plotCacheDataRequest();
     void initalWinNum();
+    void QueryAllUsers();
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
     void handleWindowNumSetData(int windNum,int* windPlotType,int* windSensorType);
-    void handleLoginResult(QString id, QString name, QString password, QString permission);
+    void handleLoginResult(int id, QString name, QString password, QString permission);
+    void handleQryAllUsersResult(QVector<userDataModel>&vecUsers);
+    void handleShowAddNewUser(QString name,QString password,QString permission);
+    void handleShowEditUser(int row,QString name,QString password,QString permission);
 
     void on_plotWindow_triggered();
 
@@ -74,6 +80,12 @@ private slots:
 
     void on_windowNumSet_triggered();
 
+    void on_newUser_clicked();
+
+    void on_editUser_clicked();
+
+    void on_deleteUser_clicked();
+
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);
 
@@ -84,7 +96,7 @@ private:
 public:
     projectConfigure *CprjConfig = nullptr;
     windowDisplay *CwindowDisp = nullptr;
-    userModel *CcurrentUserMod = nullptr;
+    userDataModel *CcurrentUserMod = nullptr;
 };
 
 Q_DECLARE_METATYPE(QCPGraphData)

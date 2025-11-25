@@ -16,7 +16,7 @@ CREATE TABLE users (
     permission VARCHAR(50) DEFAULT '操作员'
 );
 
--- 创建索引
+-- 创建索引(无需执行，添加UNIQUE属性时会默认加索引)
 CREATE INDEX idx_name ON users(name);
 
 -- 插入管理员数据

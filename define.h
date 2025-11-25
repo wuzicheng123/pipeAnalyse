@@ -193,16 +193,16 @@ public:
 };
 
 //数据库数据模型
-class userModel
+class userDataModel
 {
 public:
-    QString id;
+    int id;
     QString name;
     QString password;
     QString permission;
-    userModel()
+    userDataModel()
     {
-        id="";
+        id=-1;
         name="";
         password="";
         permission="";

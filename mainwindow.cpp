@@ -7,6 +7,7 @@
 #include "commonfun.h"
 #include <QElapsedTimer>
 #include "msgbox.h"
+#include "newuserdlg.h"
 #include <QDir>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -30,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     if(nullptr == CcurrentUserMod)
     {
-        CcurrentUserMod = new userModel;
+        CcurrentUserMod = new userDataModel;
     }
 
     //初始化代码
@@ -49,9 +50,23 @@ MainWindow::MainWindow(QWidget *parent) :
     QcpText_2 = nullptr;
     QcpText_3 = nullptr;
     QcpText_4 = nullptr;
-    //界面
+    //窗体数量设置界面
     windowNumSetDlg = nullptr;
     m_loginDlg = nullptr;
+    //用户列表界面
+    userTableModel = new QStandardItemModel(this);
+    userTableModel->setColumnCount(2);
+    userTableModel->setHorizontalHeaderLabels({"用户名","用户类别"});
+    ui->userTableView->setModel(userTableModel);
+    ui->userTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->userTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->userTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // 设置列宽
+    ui->userTableView->horizontalHeader()->setStretchLastSection(true);
+    ui->userTableView->setColumnWidth(0, 200);
+    // 设置表格样式
+    ui->userTableView->setAlternatingRowColors(true);
+    ui->userTableView->verticalHeader()->setVisible(false);
 
     m_dbWorker = nullptr;
 }
@@ -401,7 +416,11 @@ void MainWindow::initialDatabase()
         //连接信号槽
         connect(m_loginDlg,&loginDlg::loginRequest,m_dbWorker,&databaseWorker::handleLoginRequest);
         connect(m_dbWorker,&databaseWorker::loginResult,this,&MainWindow::handleLoginResult);
-
+        connect(this,&MainWindow::QueryAllUsers,m_dbWorker,&databaseWorker::handleQueryAllUsers);
+        qRegisterMetaType<QVector<userDataModel>>("QVector<userDataModel>&");
+        connect(m_dbWorker,&databaseWorker::qryAllUsersResult,this,&MainWindow::handleQryAllUsersResult);
+        connect(m_dbWorker,&databaseWorker::showAddNewUser,this,&MainWindow::handleShowAddNewUser);
+        connect(m_dbWorker,&databaseWorker::showEditUser,this,&MainWindow::handleShowEditUser);
         thread->start();
     }
 }
@@ -467,7 +486,7 @@ void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *win
     }
 }
 
-void MainWindow::handleLoginResult(QString id,QString name,QString password,QString permission)
+void MainWindow::handleLoginResult(int id,QString name,QString password,QString permission)
 {
     if("" == permission)
     {
@@ -481,6 +500,7 @@ void MainWindow::handleLoginResult(QString id,QString name,QString password,QStr
         ui->plotWindow->setEnabled(true);
         ui->userManage->setEnabled(true);
         ui->logout->setEnabled(true);
+        ui->login->setEnabled(false);
         ui->windowNumSet->setEnabled(true);
         CcurrentUserMod->id = id;
         CcurrentUserMod->name = name;
@@ -500,6 +520,42 @@ void MainWindow::handleLoginResult(QString id,QString name,QString password,QStr
             ui->deleteUser->setEnabled(false);
         }
     }
+}
+
+void MainWindow::handleQryAllUsersResult(QVector<userDataModel> &vecUsers)
+{
+    userTableModel->removeRows(0,userTableModel->rowCount());
+    int iSize = vecUsers.size();
+    for(int i=0;i<iSize;i++)
+    {
+        QList<QStandardItem*>rowItems;
+        QStandardItem* userNameItem = new QStandardItem(vecUsers[i].name);
+        QStandardItem* userTypeItem = new QStandardItem(vecUsers[i].permission);
+        rowItems<<userNameItem;
+        rowItems<<userTypeItem;
+        userTableModel->appendRow(rowItems);
+    }
+}
+
+void MainWindow::handleShowAddNewUser(QString name, QString password, QString permission)
+{
+    Q_UNUSED(password);
+    QStandardItem *usernameItem = new QStandardItem(name);
+    QStandardItem *userTypeItem = new QStandardItem(permission);
+
+    // 添加到表格
+    QList<QStandardItem*> rowItems;
+    rowItems << usernameItem;
+    rowItems << userTypeItem;
+    userTableModel->appendRow(rowItems);
+}
+
+void MainWindow::handleShowEditUser(int row, QString name, QString password, QString permission)
+{
+    Q_UNUSED(password);
+    Q_UNUSED(permission);
+    userTableModel->item(row,0)->setText(name);
+    userTableModel->item(row,1)->setText(permission);
 }
 
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
@@ -635,6 +691,8 @@ void MainWindow::on_projectManage_triggered()
 
 void MainWindow::on_userManage_triggered()
 {
+    //查询请求，并显示列表
+    emit QueryAllUsers();
     ui->stackedWidget->setCurrentIndex(1);
     ui->stackedWidget->show();
 }
@@ -659,8 +717,9 @@ void MainWindow::on_logout_triggered()
     ui->plotWindow->setEnabled(false);
     ui->userManage->setEnabled(false);
     ui->logout->setEnabled(false);
+    ui->login->setEnabled(true);
     ui->windowNumSet->setEnabled(false);
-    CcurrentUserMod->id = "";
+    CcurrentUserMod->id = -1;
     CcurrentUserMod->name = "";
     CcurrentUserMod->password = "";
     CcurrentUserMod->permission = "";
@@ -702,4 +761,35 @@ void MainWindow::on_windowNumSet_triggered()
     else {
         windowNumSetDlg->exec();
     }
+}
+
+void MainWindow::on_newUser_clicked()
+{
+    newuserdlg* newUserDlg = new newuserdlg(this);
+    newUserDlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(newUserDlg,&newuserdlg::newUserRequest,m_dbWorker,&databaseWorker::handleNewUserRequest);
+    newUserDlg->exec();
+}
+
+void MainWindow::on_editUser_clicked()
+{
+    QModelIndexList selectedIndexes = ui->userTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    QString currentName = userTableModel->item(row,0)->text();
+    QString currentPermission = userTableModel->item(row,1)->text();
+    //修改可与新建共用同一界面
+    newuserdlg* editDlg = new newuserdlg(this);
+    editDlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(editDlg,&newuserdlg::editUserRequest,m_dbWorker,&databaseWorker::handleEditUserRequest);
+    editDlg->trans2editDlg(row,currentName,currentPermission);
+    editDlg->exec();
+}
+
+void MainWindow::on_deleteUser_clicked()
+{
+
 }
