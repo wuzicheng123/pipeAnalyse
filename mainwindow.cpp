@@ -780,6 +780,11 @@ void MainWindow::on_editUser_clicked()
     }
     int row = selectedIndexes.first().row();
     QString currentName = userTableModel->item(row,0)->text();
+    if("admin" == currentName)
+    {
+        msgBox::show("警告","禁止修改admin账户",2);
+        return;
+    }
     QString currentPermission = userTableModel->item(row,1)->text();
     //修改可与新建共用同一界面
     newuserdlg* editDlg = new newuserdlg(this);

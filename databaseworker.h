@@ -22,7 +22,7 @@ public slots:
     void handleLoginRequest(QString name,QString password);
     void handleQueryAllUsers();
     void handleNewUserRequest(QString name,QString password,QString permission);
-    void handleEditUserRequest(int row,QString name,QString password,QString permission);
+    void handleEditUserRequest(int row,QString preName,QString name,QString password,QString permission);
 
 private:
 

@@ -110,7 +110,7 @@ void databaseWorker::handleNewUserRequest(QString name, QString password, QStrin
     }
 }
 
-void databaseWorker::handleEditUserRequest(int row, QString name, QString password, QString permission)
+void databaseWorker::handleEditUserRequest(int row, QString preName, QString name, QString password, QString permission)
 {
     DatabaseConnection conn;
     if(!conn.isValid())
@@ -128,7 +128,7 @@ void databaseWorker::handleEditUserRequest(int row, QString name, QString passwo
         return;
     }
     int index = -1;
-    sql = QString("select id from users where name='%1'").arg(name);
+    sql = QString("select id from users where name='%1'").arg(preName);
     ret = query.exec(sql);
     if(ret)
     {
@@ -137,8 +137,8 @@ void databaseWorker::handleEditUserRequest(int row, QString name, QString passwo
         }
         if(-1 != index)
         {
-            sql = QString("update set name='%1',password='%2',permission='%3' where "
-                          "id='%4'").arg(name).arg(password).arg(permission).arg(index);
+            sql = QString("update users set name='%1',password='%2',permission='%3' where "
+                          "id=%4").arg(name).arg(password).arg(permission).arg(index);
             ret = query.exec(sql);
             if(ret)
             {

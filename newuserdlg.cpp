@@ -15,6 +15,7 @@ newuserdlg::newuserdlg(QWidget *parent) :
     connect(ui->nameEdit,&QLineEdit::textChanged,this,&newuserdlg::handletextChanged);
     connect(ui->passwordEdit,&QLineEdit::textChanged,this,&newuserdlg::handletextChanged);
     m_row = -1;
+    m_name= "";
 }
 
 newuserdlg::~newuserdlg()
@@ -35,6 +36,7 @@ void newuserdlg::trans2editDlg(int row, QString name, QString permission)
         ui->permisssionComboBox->setCurrentIndex(1);
     }
     m_row = row;
+    m_name = name;
 }
 
 void newuserdlg::handletextChanged()
@@ -74,9 +76,9 @@ void newuserdlg::on_okButton_clicked()
         emit newUserRequest(name,password,permission);
     }
     else {
-        if(m_row > -1)
+        if(m_row > -1 && "" != m_name)
         {
-            emit editUserRequest(m_row,name,password,permission);
+            emit editUserRequest(m_row,m_name,name,password,permission);
         }
     }
     accept();

@@ -20,7 +20,8 @@ public:
 
 signals:
     void newUserRequest(QString name,QString password,QString permission);
-    void editUserRequest(int row,QString name,QString password,QString permission);
+    //preName是修改前用于查询的名称，name是修改后的名字
+    void editUserRequest(int row,QString preName,QString name,QString password,QString permission);
 
 private slots:
     void handletextChanged();
@@ -32,7 +33,8 @@ private slots:
 private:
     Ui::newuserdlg *ui;
 
-    int m_row;
+    int m_row;  //所在列表位置
+    QString m_name;  //用于查询，修改前名称
 };
 
 #endif // NEWUSERDLG_H
