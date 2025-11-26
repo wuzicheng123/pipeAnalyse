@@ -55,6 +55,7 @@ signals:
     void plotCacheDataRequest();
     void initalWinNum();
     void QueryAllUsers();
+    void deleteUserRequest(int row,QString name);
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
@@ -63,6 +64,7 @@ private slots:
     void handleQryAllUsersResult(QVector<userDataModel>&vecUsers);
     void handleShowAddNewUser(QString name,QString password,QString permission);
     void handleShowEditUser(int row,QString name,QString password,QString permission);
+    void handleShowDeleteUser(int row);
 
     void on_plotWindow_triggered();
 

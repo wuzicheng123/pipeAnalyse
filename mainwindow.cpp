@@ -421,6 +421,8 @@ void MainWindow::initialDatabase()
         connect(m_dbWorker,&databaseWorker::qryAllUsersResult,this,&MainWindow::handleQryAllUsersResult);
         connect(m_dbWorker,&databaseWorker::showAddNewUser,this,&MainWindow::handleShowAddNewUser);
         connect(m_dbWorker,&databaseWorker::showEditUser,this,&MainWindow::handleShowEditUser);
+        connect(this,&MainWindow::deleteUserRequest,m_dbWorker,&databaseWorker::handleDeleteUserRequest);
+        connect(m_dbWorker,&databaseWorker::showDeleteUser,this,&MainWindow::handleShowDeleteUser);
         thread->start();
     }
 }
@@ -556,6 +558,11 @@ void MainWindow::handleShowEditUser(int row, QString name, QString password, QSt
     Q_UNUSED(permission);
     userTableModel->item(row,0)->setText(name);
     userTableModel->item(row,1)->setText(permission);
+}
+
+void MainWindow::handleShowDeleteUser(int row)
+{
+    userTableModel->removeRow(row);
 }
 
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
@@ -768,6 +775,7 @@ void MainWindow::on_newUser_clicked()
     newuserdlg* newUserDlg = new newuserdlg(this);
     newUserDlg->setAttribute(Qt::WA_DeleteOnClose);
     connect(newUserDlg,&newuserdlg::newUserRequest,m_dbWorker,&databaseWorker::handleNewUserRequest);
+    newUserDlg->trans2newDlg();
     newUserDlg->exec();
 }
 
@@ -796,5 +804,23 @@ void MainWindow::on_editUser_clicked()
 
 void MainWindow::on_deleteUser_clicked()
 {
-
+    QModelIndexList selectedIndexes = ui->userTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    QString username = userTableModel->item(row,0)->text();
+    if("admin" == username)
+    {
+        msgBox::show("警告","禁止删除admin账户",2);
+        return;
+    }
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this,"确认删除",QString("确定要删除用户'%1'吗").arg(username),
+                                  QMessageBox::Yes|QMessageBox::No);
+    if(QMessageBox::Yes == reply)
+    {
+        emit deleteUserRequest(row,username);
+    }
 }

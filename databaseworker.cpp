@@ -151,3 +151,31 @@ void databaseWorker::handleEditUserRequest(int row, QString preName, QString nam
         }
     }
 }
+
+void databaseWorker::handleDeleteUserRequest(int row, QString name)
+{
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("delete from users where name='%1'").arg(name);
+    ret = query.exec(sql);
+    if(ret)
+    {
+        emit showDeleteUser(row);
+    }
+    else {
+        msgBox::show("警告","用户删除失败",2);
+    }
+}

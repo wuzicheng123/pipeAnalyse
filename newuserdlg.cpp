@@ -39,6 +39,13 @@ void newuserdlg::trans2editDlg(int row, QString name, QString permission)
     m_name = name;
 }
 
+void newuserdlg::trans2newDlg()
+{
+    this->setWindowTitle("新建用户");
+    ui->title->setText("新建用户");
+    ui->permisssionComboBox->setCurrentIndex(0);
+}
+
 void newuserdlg::handletextChanged()
 {
     bool nameeditValid = (ui->nameEdit->text().size() != 0);

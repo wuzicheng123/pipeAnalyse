@@ -17,12 +17,14 @@ signals:
     void qryAllUsersResult(QVector<userDataModel>&vecUsers);
     void showAddNewUser(QString name,QString password,QString permission);
     void showEditUser(int row,QString name,QString password,QString permission);
+    void showDeleteUser(int row);
 
 public slots:
     void handleLoginRequest(QString name,QString password);
     void handleQueryAllUsers();
     void handleNewUserRequest(QString name,QString password,QString permission);
     void handleEditUserRequest(int row,QString preName,QString name,QString password,QString permission);
+    void handleDeleteUserRequest(int row,QString name);
 
 private:
 

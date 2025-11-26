@@ -17,6 +17,7 @@ public:
     ~newuserdlg();
 
     void trans2editDlg(int row,QString name, QString permission);
+    void trans2newDlg();
 
 signals:
     void newUserRequest(QString name,QString password,QString permission);
