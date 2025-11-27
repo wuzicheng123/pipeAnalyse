@@ -190,6 +190,20 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
                 m_tracers.append(oneTracer);
             }
         }
+        //已初始化后更新追踪器（翻页或拖拽时）
+        else if(36 == this->graphCount() && m_initial)
+        {
+            for(int i=0;i<36;i++)
+            {
+                TracerInfo& oneTracer = m_tracers[i];
+                QCPGraph* graph = this->graph(i);
+                if(graph && !graph->data()->isEmpty())
+                {
+                    oneTracer.tracer->setGraph(graph);
+                    oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
+                }
+            }
+        }
 
         if(false == m_leftPress)
         {
