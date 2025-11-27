@@ -692,8 +692,9 @@ void MainWindow::on_previousPageBtn_clicked()
 
 void MainWindow::on_projectManage_triggered()
 {
-    //test
-    setMutiWindow(2);
+    //emit查询项目列表请求
+    ui->stackedWidget->setCurrentIndex(2);
+    ui->stackedWidget->show();
 }
 
 void MainWindow::on_userManage_triggered()
