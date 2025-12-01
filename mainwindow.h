@@ -47,6 +47,7 @@ public:
     windowNumSetDialog *windowNumSetDlg; //多窗体设置页面
     loginDlg *m_loginDlg;//登录界面
     QStandardItemModel *userTableModel;
+    QStandardItemModel *prjTableModel;
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）

@@ -22,3 +22,24 @@ CREATE INDEX idx_name ON users(name);
 -- 插入管理员数据
 INSERT INTO users (name, password, permission) VALUES 
 ('admin', '123', '管理员');
+
+新建项目表
+create table project(
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '项目ID',
+    name VARCHAR(255) NOT NULL COMMENT '项目名称',
+    discript VARCHAR(1000) COMMENT '项目描述',
+    sampleinterval DOUBLE COMMENT '采样间距',
+    wallthicknesstype VARCHAR(100) COMMENT '壁厚',
+    datapath VARCHAR(500) COMMENT '数据文件路径',
+    createtime TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    creator INT NOT NULL COMMENT '创建者ID，关联外键',
+    PRIMARY KEY(id),
+    INDEX idx_name(name),
+    INDEX idx_createtime(createtime),
+    INDEX idx_creator(creator)
+)
+
+--插入测试项目数据
+insert into project (name,discript,sampleinterval,wallthicknesstype,datapath,creator)
+values('121test','测试数据项目',3,'20','D:\\Soft\\管道漏磁内检测软件\\data\\测试数据\\测试数据12.10\\104\\',1);
+

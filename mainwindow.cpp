@@ -67,6 +67,21 @@ MainWindow::MainWindow(QWidget *parent) :
     // 设置表格样式
     ui->userTableView->setAlternatingRowColors(true);
     ui->userTableView->verticalHeader()->setVisible(false);
+    ui->userTableView->setGridStyle(Qt::NoPen);
+    //项目列表界面
+    prjTableModel = new QStandardItemModel(this);
+    prjTableModel->setColumnCount(6);
+    prjTableModel->setHorizontalHeaderLabels({"项目名","项目描述","壁厚","采样间距","创建时间","创建人"});
+    ui->projectTableView->setModel(prjTableModel);
+    ui->projectTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->projectTableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->projectTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // 设置列宽
+    ui->projectTableView->horizontalHeader()->setStretchLastSection(true);
+    ui->projectTableView->setColumnWidth(0, ui->projectTableView->size().width()/6);
+    // 设置表格样式
+    ui->projectTableView->setAlternatingRowColors(true);
+    ui->projectTableView->verticalHeader()->setVisible(false);
 
     m_dbWorker = nullptr;
 }
