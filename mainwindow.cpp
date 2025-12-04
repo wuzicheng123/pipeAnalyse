@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //窗体数量设置界面
     windowNumSetDlg = nullptr;
     m_loginDlg = nullptr;
-    //用户列表界面
+    //用户列表界面--------------------------------------------------
     userTableModel = new QStandardItemModel(this);
     userTableModel->setColumnCount(2);
     userTableModel->setHorizontalHeaderLabels({"用户名","用户类别"});
@@ -68,7 +68,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->userTableView->setAlternatingRowColors(true);
     ui->userTableView->verticalHeader()->setVisible(false);
     ui->userTableView->setGridStyle(Qt::NoPen);
-    //项目列表界面
+    //项目列表界面--------------------------------------------------
     prjTableModel = new QStandardItemModel(this);
     prjTableModel->setColumnCount(6);
     prjTableModel->setHorizontalHeaderLabels({"项目名","项目描述","壁厚","采样间距","创建时间","创建人"});
@@ -82,6 +82,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // 设置表格样式
     ui->projectTableView->setAlternatingRowColors(true);
     ui->projectTableView->verticalHeader()->setVisible(false);
+    ui->projectTableView->setMouseTracking(true);
+    connect(ui->projectTableView,&QTableView::entered,this,&MainWindow::showTooltip);
+    ui->closePrj->setEnabled(false);
 
     m_dbWorker = nullptr;
 }
@@ -431,13 +434,19 @@ void MainWindow::initialDatabase()
         //连接信号槽
         connect(m_loginDlg,&loginDlg::loginRequest,m_dbWorker,&databaseWorker::handleLoginRequest);
         connect(m_dbWorker,&databaseWorker::loginResult,this,&MainWindow::handleLoginResult);
-        connect(this,&MainWindow::QueryAllUsers,m_dbWorker,&databaseWorker::handleQueryAllUsers);
+        connect(this,&MainWindow::queryAllUsers,m_dbWorker,&databaseWorker::handleQueryAllUsers);
         qRegisterMetaType<QVector<userDataModel>>("QVector<userDataModel>&");
         connect(m_dbWorker,&databaseWorker::qryAllUsersResult,this,&MainWindow::handleQryAllUsersResult);
         connect(m_dbWorker,&databaseWorker::showAddNewUser,this,&MainWindow::handleShowAddNewUser);
         connect(m_dbWorker,&databaseWorker::showEditUser,this,&MainWindow::handleShowEditUser);
         connect(this,&MainWindow::deleteUserRequest,m_dbWorker,&databaseWorker::handleDeleteUserRequest);
         connect(m_dbWorker,&databaseWorker::showDeleteUser,this,&MainWindow::handleShowDeleteUser);
+        connect(this,&MainWindow::queryAllProjects,m_dbWorker,&databaseWorker::handleQueryAllProjects);
+        qRegisterMetaType<QVector<projectDataModel>>("QVector<projectDataModel>&");
+        connect(m_dbWorker,&databaseWorker::qryAllPrjsResult,this,&MainWindow::handleQryAllPrjsResult);
+        connect(this,&MainWindow::queryProjectById,m_dbWorker,&databaseWorker::handleQueryProjectById);
+        qRegisterMetaType<projectDataModel>("projectDataModel&");
+        connect(m_dbWorker,&databaseWorker::qryProjectByIdResult,this,&MainWindow::handleQryProjectByIdResult);
         thread->start();
     }
 }
@@ -580,6 +589,76 @@ void MainWindow::handleShowDeleteUser(int row)
     userTableModel->removeRow(row);
 }
 
+void MainWindow::handleQryAllPrjsResult(QVector<projectDataModel> &vecPrjs)
+{
+    prjTableModel->removeRows(0,prjTableModel->rowCount());
+    int iSize = vecPrjs.size();
+    for(int i=0;i<iSize;i++)
+    {
+        QList<QStandardItem*>rowItems;
+        QStandardItem* prjNameItem = new QStandardItem(vecPrjs[i].name);
+        prjNameItem->setData(vecPrjs[i].id,Qt::UserRole+1);
+        QStandardItem* discriptItem = new QStandardItem(vecPrjs[i].discript);
+        QStandardItem* wallthicknessItem = new QStandardItem(vecPrjs[i].wallthicknesstype);
+        QStandardItem* sampleintervalItem = new QStandardItem(QString::number(vecPrjs[i].sampleinterval));
+        QStandardItem* createtimeItem = new QStandardItem(vecPrjs[i].createtime);
+        QStandardItem* creatorNameItem = new QStandardItem(vecPrjs[i].creatorName);
+        rowItems<<prjNameItem;
+        rowItems<<discriptItem;
+        rowItems<<wallthicknessItem;
+        rowItems<<sampleintervalItem;
+        rowItems<<createtimeItem;
+        rowItems<<creatorNameItem;
+        prjTableModel->appendRow(rowItems);
+    }
+}
+
+void MainWindow::handleQryProjectByIdResult(projectDataModel &onePrj)
+{
+    //获取qsfilePath下的文件列表 以及路径合法性判断
+    //数据有效性校验
+    CprjConfig->dataDirPath = onePrj.datapath;
+    QDir dir(CprjConfig->dataDirPath);
+    if(!dir.exists())
+    {
+        msgBox::show("告警","打开项目错误，文件夹不存在",2);
+        CprjConfig->dataDirPath = "";
+        return;
+    }
+
+    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
+
+    //获取文件夹下文件名
+    int bytesNum = 0;
+    QString qsfilePath="";
+    QStringList filters = {"*.bin"};
+    QFileInfoList files = dir.entryInfoList(filters,QDir::Files,QDir::Name);
+    if(files.isEmpty())
+    {
+        msgBox::show("告警","打开项目错误，无符合命名要求的数据文件",2);
+        CprjConfig->dataDirPath = "";
+        return;
+    }
+    for (const QFileInfo &file : files) {
+        QString fileName = file.fileName();
+        CprjConfig->fileNameVec.append(fileName);
+        QString subString = fileName.mid(9,3);
+        int result = QString::compare("000",subString);
+        if(0 == result)
+        {
+            CprjConfig->curFileName = file.fileName();
+            qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+        }
+        //查询每个文件的帧数
+        bytesNum = static_cast<int>(file.size());
+        int frameNum = (bytesNum-20)/268;
+        CprjConfig->fileNameBytesMap.insert(fileName,frameNum);
+    }
+    CprjConfig->dInterval = onePrj.sampleinterval;
+    ui->openPrj->setEnabled(false);
+    ui->closePrj->setEnabled(true);
+}
+
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
 {
    CwindowDisp->startPos = xLower;
@@ -622,47 +701,18 @@ void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLowe
 
 void MainWindow::on_plotWindow_triggered()
 {
+    if(ui->openPrj->isEnabled())
+    {
+        msgBox::show("警告","未选择项目打开",2);
+        return;
+    }
     ui->stackedWidget->setCurrentIndex(0);
     ui->stackedWidget->show();
 
     //emit
     if(CwindowDisp->bFirstPlot)
     {
-        //获取qsfilePath下的文件列表 以及路径合法性判断
-        CprjConfig->dataDirPath = "D:\\Soft\\管道漏磁内检测软件\\data\\测试数据\\测试数据12.10\\104\\";
-
-        QDir dir(CprjConfig->dataDirPath);
-        if(!dir.exists())
-        {
-            msgBox::show("告警","文件夹不存在",2);
-            return;
-        }
-
-        //------未来迁移到打开项目按钮逻辑里-------------
-        QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
-
-        //获取文件夹下文件名
-        int bytesNum = 0;
-        QString qsfilePath="";
-        QStringList filters = {"*.bin"};
-        QFileInfoList files = dir.entryInfoList(filters,QDir::Files,QDir::Name);
-        for (const QFileInfo &file : files) {
-            QString fileName = file.fileName();
-            CprjConfig->fileNameVec.append(fileName);
-            QString subString = fileName.mid(9,3);
-            int result = QString::compare("000",subString);
-            if(0 == result)
-            {
-                CprjConfig->curFileName = file.fileName();
-                qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
-            }
-            //查询每个文件的帧数
-            bytesNum = static_cast<int>(file.size());
-            int frameNum = (bytesNum-20)/268;
-            CprjConfig->fileNameBytesMap.insert(fileName,frameNum);
-        }
-        //------------------------------------------
-
+        QString qsfilePath=CprjConfig->dataDirPath+CprjConfig->curFileName;
         setMutiWindow(CwindowDisp->windNum);
         emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
         CwindowDisp->bFirstPlot = false;
@@ -708,6 +758,7 @@ void MainWindow::on_previousPageBtn_clicked()
 void MainWindow::on_projectManage_triggered()
 {
     //emit查询项目列表请求
+    emit queryAllProjects();
     ui->stackedWidget->setCurrentIndex(2);
     ui->stackedWidget->show();
 }
@@ -715,7 +766,7 @@ void MainWindow::on_projectManage_triggered()
 void MainWindow::on_userManage_triggered()
 {
     //查询请求，并显示列表
-    emit QueryAllUsers();
+    emit queryAllUsers();
     ui->stackedWidget->setCurrentIndex(1);
     ui->stackedWidget->show();
 }
@@ -768,6 +819,13 @@ void MainWindow::on_logout_triggered()
     CwindowDisp->windNum = 1;
     CwindowDisp->windSensorType[0] = 1;
     CwindowDisp->windPlotType[0] = 1;
+    CprjConfig->dInterval = 0;
+    CprjConfig->dataDirPath = "";
+    CprjConfig->curFileName = "";
+    QVector<QString>().swap(CprjConfig->fileNameVec);
+    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
+    ui->openPrj->setEnabled(true);
+    ui->closePrj->setEnabled(false);
     emit initalWinNum();
     ui->stackedWidget->hide();
 }
@@ -839,4 +897,39 @@ void MainWindow::on_deleteUser_clicked()
     {
         emit deleteUserRequest(row,username);
     }
+}
+
+void MainWindow::showTooltip(const QModelIndex &index)
+{
+    QToolTip::showText(QCursor::pos(),index.data().toString());
+}
+
+void MainWindow::on_openPrj_clicked()
+{
+    QModelIndexList selectedIndexes = ui->projectTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    QStandardItem* prjnameItem = prjTableModel->item(row,0);
+    int prjId = prjnameItem->data(Qt::UserRole+1).toInt();
+    emit queryProjectById(prjId);
+}
+
+void MainWindow::on_closePrj_clicked()
+{
+    CwindowDisp->startPos = 0;
+    CwindowDisp->offset = 2000;
+    CwindowDisp->yLower = 0;
+    CwindowDisp->yUpper = 0;
+    CwindowDisp->pageOffset = 1500;
+    CprjConfig->dInterval = 0;
+    CprjConfig->dataDirPath = "";
+    CprjConfig->curFileName = "";
+    QVector<QString>().swap(CprjConfig->fileNameVec);
+    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
+    CwindowDisp->bFirstPlot = true;
+    ui->openPrj->setEnabled(true);
+    ui->closePrj->setEnabled(false);
 }

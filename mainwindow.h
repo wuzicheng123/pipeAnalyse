@@ -55,8 +55,10 @@ signals:
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
     void plotCacheDataRequest();
     void initalWinNum();
-    void QueryAllUsers();
+    void queryAllUsers();
     void deleteUserRequest(int row,QString name);
+    void queryAllProjects();
+    void queryProjectById(int id);
 
 private slots:
     int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
@@ -66,6 +68,8 @@ private slots:
     void handleShowAddNewUser(QString name,QString password,QString permission);
     void handleShowEditUser(int row,QString name,QString password,QString permission);
     void handleShowDeleteUser(int row);
+    void handleQryAllPrjsResult(QVector<projectDataModel>&vecPrjs);
+    void handleQryProjectByIdResult(projectDataModel& onePrj);
 
     void on_plotWindow_triggered();
 
@@ -88,6 +92,12 @@ private slots:
     void on_editUser_clicked();
 
     void on_deleteUser_clicked();
+    //tooltip项目列表提示
+    void showTooltip(const QModelIndex& index);
+
+    void on_openPrj_clicked();
+
+    void on_closePrj_clicked();
 
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);

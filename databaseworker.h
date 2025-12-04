@@ -18,6 +18,8 @@ signals:
     void showAddNewUser(QString name,QString password,QString permission);
     void showEditUser(int row,QString name,QString password,QString permission);
     void showDeleteUser(int row);
+    void qryAllPrjsResult(QVector<projectDataModel>&vecPrjs);
+    void qryProjectByIdResult(projectDataModel& onePrj);
 
 public slots:
     void handleLoginRequest(QString name,QString password);
@@ -25,6 +27,8 @@ public slots:
     void handleNewUserRequest(QString name,QString password,QString permission);
     void handleEditUserRequest(int row,QString preName,QString name,QString password,QString permission);
     void handleDeleteUserRequest(int row,QString name);
+    void handleQueryAllProjects();
+    void handleQueryProjectById(int id);
 
 private:
 

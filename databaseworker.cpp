@@ -179,3 +179,99 @@ void databaseWorker::handleDeleteUserRequest(int row, QString name)
         msgBox::show("警告","用户删除失败",2);
     }
 }
+
+void databaseWorker::handleQueryAllProjects()
+{
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("select name,discript,wallthicknesstype,sampleinterval,"
+                  "createtime,creator,id from project");
+    ret = query.exec(sql);
+    QVector<projectDataModel>vecPrjs;
+    if(ret)
+    {
+        int nfield = query.record().count();
+        while(query.next())
+        {
+            if(7 == nfield)
+            {
+                projectDataModel oneProject;
+                oneProject.name = query.value(0).toString();
+                oneProject.discript = query.value(1).toString();
+                oneProject.wallthicknesstype = query.value(2).toString();
+                oneProject.sampleinterval = query.value(3).toDouble();
+                oneProject.createtime = query.value(4).toString();
+                oneProject.creator = query.value(5).toInt();
+                oneProject.id = query.value(6).toInt();
+                vecPrjs.append(oneProject);
+            }
+        }
+        int iSize = vecPrjs.size();
+        for(int i=0;i<iSize;i++)
+        {
+            sql = QString("select name from users where id=%1").arg(vecPrjs[i].creator);
+            ret = query.exec(sql);
+            if(ret)
+            {
+                if(query.next())
+                {
+                    vecPrjs[i].creatorName = query.value(0).toString();
+                }
+            }
+        }
+        //emit到prj显示界面
+        emit qryAllPrjsResult(vecPrjs);
+    }
+}
+
+void databaseWorker::handleQueryProjectById(int id)
+{
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("select name,sampleinterval,datapath from project where id=%1").arg(id);
+    ret = query.exec(sql);
+    if(ret)
+    {
+        int nField = query.record().count();
+        if(query.next())
+        {
+
+            if(3 == nField)
+            {
+                projectDataModel oneProject;
+                oneProject.name = query.value(0).toString();
+                oneProject.sampleinterval = query.value(1).toDouble();
+                oneProject.datapath = query.value(2).toString();
+                oneProject.id = id;
+                //emit
+                emit qryProjectByIdResult(oneProject);
+            }
+        }
+    }
+}

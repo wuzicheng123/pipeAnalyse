@@ -209,6 +209,32 @@ public:
     }
 };
 
+class projectDataModel
+{
+public:
+    int id;
+    QString name;
+    QString discript;
+    double sampleinterval;
+    QString wallthicknesstype;
+    QString datapath;
+    QString createtime;
+    int creator;
+    QString creatorName;
+    projectDataModel()
+    {
+        id = -1;
+        name = "";
+        discript = "";
+        sampleinterval = 0.0;
+        wallthicknesstype = "";
+        datapath = "";
+        createtime = "";
+        creator = -1;
+        creatorName = "";
+    }
+};
+
 Q_DECLARE_METATYPE(dataModel)
 
 #endif // DEFINE_H
