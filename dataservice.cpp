@@ -282,137 +282,165 @@ void dataService::setMainWindow(MainWindow *exMainW)
     m_exMainW = exMainW;
 }
 
-void dataService::handleModelDataRequest(QString& qsfilePath,qint64 startPos, qint64 offset)
+void dataService::handleModelDataRequest(QString& qsfilePath, qint64 startPos, qint64 offset)
 {
     m_dataRwLock.lockForWrite();
     //使用swap代替clear清除，可避免内存溢出问题
-    QMap<int,QVector<dataModel>>().swap(m_dataModel);
-    qint64 differ = 0;
+    QVector<QMap<int,QVector<dataModel>>>().swap(m_dataModelVec);
     //查询前一帧数据，用于预处理操作
-    QMap<int,QVector<dataModel>>oneMap;
-    qint64 differ2Pre = 0;
+    QVector<QMap<int,QVector<dataModel>>>oneMapVec;
     qint64 initialStartPos = startPos;
+    qint64 initialOffset = offset;
+    //按盒子遍历
+    for(int k=0;k<m_exMainW->CprjConfig->boxDirPath.size();k++)
+    {
+        qint64 differ2Pre = 0;
+        qint64 differ = 0;
+        startPos = initialStartPos;
+        //前一帧所在文件和所在位置
+        QMap<int,QVector<dataModel>>oneMap;
+        QMap<int,QVector<dataModel>>dataModelMap;
+        QVector<QString>&fileNameVec = m_exMainW->CprjConfig->fileNameVecByBox[k];
+        QMap<QString,int>&fileNameBytesMap = m_exMainW->CprjConfig->fileNameBytesMapByBox[k];
+        int fileNumber = fileNameVec.size();
+        int i = 0;
 
-    //前一帧所在文件和所在位置
-    int fileNumber = m_exMainW->CprjConfig->fileNameVec.size();
-    int i = 0;
-    while (startPos > 0) {
-        if(i < fileNumber)
-        {
-            QString thisFileName = m_exMainW->CprjConfig->fileNameVec[i];
-            int thisFileFrame = m_exMainW->CprjConfig->fileNameBytesMap[thisFileName];
-            startPos = startPos - thisFileFrame;
-            i++;
-        }
-        else {
-            break;
-        }
-    }
-    if(i>0 && i<=fileNumber && startPos<=0)
-    {
-        m_exMainW->CprjConfig->curFileName = m_exMainW->CprjConfig->fileNameVec[--i];
-        qsfilePath = m_exMainW->CprjConfig->dataDirPath + m_exMainW->CprjConfig->curFileName;
-        int thisFileFrame = m_exMainW->CprjConfig->fileNameBytesMap[m_exMainW->CprjConfig->curFileName];
-        startPos = thisFileFrame + startPos - 1; //前一帧位置
-        readDataFromBinByOffset(qsfilePath,oneMap,startPos,1,differ2Pre);
-    }
-
-    //开始帧所在文件和件内部位置
-    startPos = initialStartPos;
-    i = 0;
-    //startPos == 0
-    if(0 == startPos)
-    {
-        m_exMainW->CprjConfig->curFileName = m_exMainW->CprjConfig->fileNameVec[0];
-        qsfilePath = m_exMainW->CprjConfig->dataDirPath + m_exMainW->CprjConfig->curFileName;
-    }
-    //startPos != 0
-    while (startPos > 0) {
-        if(i < fileNumber)
-        {
-            QString thisFileName = m_exMainW->CprjConfig->fileNameVec[i];
-            int thisFileFrame = m_exMainW->CprjConfig->fileNameBytesMap[thisFileName];
-            startPos = startPos - thisFileFrame;
-            i++;
-        }
-        else {
-            break;
-        }
-    }
-    if(i>0 && i<=fileNumber)
-    {
-        if(startPos > 0)
-        {
-            //目录下文件已读完
-            m_dataRwLock.unlock();
-            //emit 发送读取到的数据m_dataModel
-            emit dataModel2PlotProcess(m_dataModel,oneMap,initialStartPos);
-            return;
-        }
-        if(0 == startPos)
-        {
-            //从当前文件头开始读取
-            m_exMainW->CprjConfig->curFileName = m_exMainW->CprjConfig->fileNameVec[i];
-            qsfilePath = m_exMainW->CprjConfig->dataDirPath + m_exMainW->CprjConfig->curFileName;
-            if(i == fileNumber)
+        while (startPos > 0) {
+            if(i < fileNumber)
             {
-                m_dataRwLock.unlock();
-                //emit 发送读取到的数据m_dataModel
-                emit dataModel2PlotProcess(m_dataModel,oneMap,initialStartPos);
-                return;
-            }
-        }
-        //startPos < 0
-        else
-        {
-            //从前一个文件开始读取
-            m_exMainW->CprjConfig->curFileName = m_exMainW->CprjConfig->fileNameVec[--i];
-            qsfilePath = m_exMainW->CprjConfig->dataDirPath + m_exMainW->CprjConfig->curFileName;
-            int thisFileFrame = m_exMainW->CprjConfig->fileNameBytesMap[m_exMainW->CprjConfig->curFileName];
-            startPos = thisFileFrame + startPos;
-        }
-    }
-
-    do{
-        int iRet = readDataFromBinByOffset(qsfilePath,m_dataModel,startPos,offset,differ);
-        startPos = startPos+offset-differ;
-        offset = differ;
-
-        if(0 == iRet) //正常，继续循环
-        {
-
-        }
-        else if(-1 == iRet) //打开文件失败
-        {
-            break;
-        }
-        else //返回值-2，读取下一个文件
-        {
-            if(nullptr != m_exMainW)
-            {
-                //向后查找下一个文件                
-                int fileIndex = m_exMainW->CprjConfig->fileNameVec.indexOf(m_exMainW->CprjConfig->curFileName);
-                int filesNum = m_exMainW->CprjConfig->fileNameVec.size();
-                if(fileIndex >=0 && fileIndex < filesNum-1)
-                {
-                    fileIndex++;
-                    QString nextFilename = m_exMainW->CprjConfig->fileNameVec[fileIndex];
-                    m_exMainW->CprjConfig->curFileName = nextFilename;
-                    qsfilePath = m_exMainW->CprjConfig->dataDirPath + m_exMainW->CprjConfig->curFileName;
-                    startPos = 0;
-                }
-                else {
-                    qDebug()<<"当前文件夹下的数据已全部读出";
-                    break;
-                }
+                QString thisFileName = fileNameVec[i];
+                int thisFileFrame = fileNameBytesMap[thisFileName];
+                startPos = startPos - thisFileFrame;
+                i++;
             }
             else {
-                qDebug()<<"dataService中获取主窗体指针失败";
                 break;
             }
         }
-    }while(differ != 0);
+        if(i>0 && i<=fileNumber && startPos<=0)
+        {
+            m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[--i];
+            qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
+            int thisFileFrame = fileNameBytesMap[m_exMainW->CprjConfig->curFileNamevec[k]];
+            startPos = thisFileFrame + startPos - 1; //前一帧位置
+            readDataFromBinByOffset(qsfilePath,oneMap,startPos,1,differ2Pre);
+        }
+        oneMapVec.append(oneMap);
+
+        //开始帧所在文件和内部位置
+        startPos = initialStartPos;
+        i = 0;
+        //startPos == 0
+        if(0 == startPos)
+        {
+            m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[0];
+            qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
+        }
+        //startPos != 0
+        while (startPos > 0) {
+            if(i < fileNumber)
+            {
+                QString thisFileName = fileNameVec[i];
+                int thisFileFrame = fileNameBytesMap[thisFileName];
+                startPos = startPos - thisFileFrame;
+                i++;
+            }
+            else {
+                break;
+            }
+        }
+        if(i>0 && i<=fileNumber)
+        {
+            if(startPos > 0)
+            {
+                //目录下文件已读完(外层循环最后一轮遍历)
+                m_dataModelVec.append(dataModelMap);
+                if(m_exMainW->CprjConfig->boxDirPath.size()-1 == k)
+                {
+                    m_dataRwLock.unlock();
+                    //emit 发送读取到的数据m_dataModelVec
+                    emit dataModel2PlotProcessBybox(m_dataModelVec,oneMapVec,initialStartPos);
+                    return;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            if(0 == startPos)
+            {
+                //从当前文件头开始读取
+                m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[i];
+                qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
+                if(i == fileNumber)
+                {
+                    m_dataModelVec.append(dataModelMap);
+                    if(m_exMainW->CprjConfig->boxDirPath.size()-1 == k)
+                    {
+                        m_dataRwLock.unlock();
+                        //emit 发送读取到的数据m_dataModelVec
+                        emit dataModel2PlotProcessBybox(m_dataModelVec,oneMapVec,initialStartPos);
+                        return;
+                    }
+                    else {
+                        continue;
+                    }
+                }
+            }
+            //startPos < 0
+            else
+            {
+                //从前一个文件开始读取
+                m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[--i];
+                qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
+                int thisFileFrame = fileNameBytesMap[m_exMainW->CprjConfig->curFileNamevec[k]];
+                startPos = thisFileFrame + startPos;
+            }
+        }
+
+        offset = initialOffset;
+        do{
+            int iRet = readDataFromBinByOffset(qsfilePath,dataModelMap,startPos,offset,differ);
+            startPos = startPos+offset-differ;
+            offset = differ;
+
+            if(0 == iRet) //正常，继续循环
+            {
+
+            }
+            else if(-1 == iRet) //打开文件失败
+            {
+                break;
+            }
+            else //返回值-2，读取下一个文件
+            {
+                if(nullptr != m_exMainW)
+                {
+                    //向后查找下一个文件
+                    int fileIndex = fileNameVec.indexOf(m_exMainW->CprjConfig->curFileNamevec[k]);
+                    int filesNum = fileNameVec.size();
+                    if(fileIndex >= 0 && fileIndex < filesNum-1)
+                    {
+                        fileIndex++;
+                        QString nextFilename = fileNameVec[fileIndex];
+                        m_exMainW->CprjConfig->curFileNamevec[k] = nextFilename;
+                        qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
+                        startPos = 0;
+                    }
+                    else {
+                        qDebug()<<"当前文件夹下的数据已全部读出";
+                        break;
+                    }
+                }
+                else {
+                    qDebug()<<"dataService中获取主窗体指针失败";
+                    break;
+                }
+            }
+        }while(differ != 0);
+        m_dataModelVec.append(dataModelMap);
+    }
     m_dataRwLock.unlock();
-    //emit 发送读取到的数据m_dataModel
-    emit dataModel2PlotProcess(m_dataModel,oneMap,initialStartPos);
+    //emit 发送读取到的数据m_dataModelVec
+    emit dataModel2PlotProcessBybox(m_dataModelVec,oneMapVec,initialStartPos);
 }

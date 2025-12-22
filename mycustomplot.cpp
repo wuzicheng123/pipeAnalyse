@@ -73,13 +73,13 @@ void MyCustomPlot::wheelEvent(QWheelEvent *event)
         m_timer = new QTimer;
         connect(m_timer,&QTimer::timeout,this,&MyCustomPlot::handleTimeout);
         m_timer->setSingleShot(true);
-        m_timer->start(200);
+        m_timer->start(500);
     }
     else {
         if(m_timer->isActive())
         {}
         else {
-            m_timer->start(200);
+            m_timer->start(500);
         }
     }
 }
@@ -94,20 +94,20 @@ void MyCustomPlot::mouseMoveEvent(QMouseEvent *event)
             m_dragTimer = new QTimer;
             connect(m_dragTimer,&QTimer::timeout,this,&MyCustomPlot::handleTimeoutBydrag);
             m_dragTimer->setSingleShot(true);
-            m_dragTimer->start(200);
+            m_dragTimer->start(500);
         }
         else {
             if(m_dragTimer->isActive())
             {}
             else {
-                m_dragTimer->start(200);
+                m_dragTimer->start(500);
             }
         }
     }
 
     if(m_leftPress)
     {
-        if(36 == m_tracers.size())
+        if(m_tracers.size() > m_currentIndex)
         {
             TracerInfo& oneTracer = m_tracers[m_currentIndex];
             double x_data = this->xAxis->pixelToCoord(event->pos().x());
@@ -116,11 +116,13 @@ void MyCustomPlot::mouseMoveEvent(QMouseEvent *event)
 
             //标牌显示内容
             QString info = "";
-            int probeNum = (m_currentIndex)/6+1;
-            int sensorNum = m_currentIndex%6+1;
+            int indexInbox = m_currentIndex%36;
+            int boxNum = m_currentIndex/36+1;
+            int probeNum = (indexInbox)/6+1;
+            int sensorNum = indexInbox%6+1;
             //利用图表标题记录是那一类型数据
             double magnetic = 0.0;
-            magnetic = tracerY - (probeNum-1)*6 - (sensorNum-1);
+            magnetic = tracerY - (boxNum-1)*36 - (probeNum-1)*6 - (sensorNum-1);
             if("霍尔X轴" == m_titleText)
             {
                 magnetic = magnetic*plotProcess::getInstance()->hallUpperLimitXY/50;
@@ -136,8 +138,8 @@ void MyCustomPlot::mouseMoveEvent(QMouseEvent *event)
             else if("涡流" == m_titleText)
             {}
             //刷新标牌显示
-            info = QString("探头:%1 传感器:%2 %3\n位置:%4 磁场强度:%5").arg(probeNum).arg(sensorNum)
-                    .arg(m_titleText).arg(x_data).arg(magnetic);
+            info = QString("传感器盒:%1 探头:%2 传感器:%3 \n%4 位置:%5 磁场强度:%6").arg(boxNum).arg(probeNum)
+                    .arg(sensorNum).arg(m_titleText).arg(x_data).arg(magnetic);
             oneTracer.label->setText(info);
 
             this->replot();
@@ -156,44 +158,56 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
     }
     else if(Qt::LeftButton == event->button())
     {
-        //初始化创建追踪器
-        if(36 == this->graphCount() && !m_initial)
+        //初始化创建追踪器或追踪器数量少于图像数量
+        int graphSize = this->graphCount();
+        if(!m_initial || graphSize > m_tracers.size())
         {
             m_initial = true;
-            for(int i=0;i<36;i++)
+            for(int i=0;i<graphSize;i++)
             {
-                TracerInfo oneTracer;
-                QCPGraph* graph = this->graph(i);
-                if(graph && !graph->data()->isEmpty())
+                if(i<m_tracers.size())
                 {
-                    oneTracer.isActive = false;
-                    oneTracer.tracer = new QCPItemTracer(this);
-                    oneTracer.tracer->setGraph(graph);
-                    oneTracer.tracer->setInterpolating(false);
-                    oneTracer.tracer->setStyle(QCPItemTracer::tsCrosshair);
-                    oneTracer.tracer->setSize(6);
-                    oneTracer.tracer->setVisible(oneTracer.isActive);
-
-                    oneTracer.label = new QCPItemText(this);
-                    oneTracer.label->setPositionAlignment(Qt::AlignLeft|Qt::AlignBottom);
-                    oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
-                    oneTracer.label->position->setCoords(10,-5);
-                    oneTracer.label->setText(QString("Point %1").arg(i));
-                    oneTracer.label->setTextAlignment(Qt::AlignLeft);
-                    oneTracer.label->setFont(QFont(font().family(), 9));
-                    oneTracer.label->setPen(QPen(Qt::black));
-                    oneTracer.label->setBrush(QBrush(QColor(255,255,255,200)));
-                    oneTracer.label->setPadding(QMargins(3, 1, 3, 1));
-                    oneTracer.label->setVisible(oneTracer.isActive);
+                    TracerInfo& oneTracer = m_tracers[i];
+                    QCPGraph* graph = this->graph(i);
+                    if(graph && !graph->data()->isEmpty())
+                    {
+                        oneTracer.tracer->setGraph(graph);
+                        oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
+                    }
                 }
+                else {
+                    TracerInfo oneTracer;
+                    QCPGraph* graph = this->graph(i);
+                    if(graph && !graph->data()->isEmpty())
+                    {
+                        oneTracer.isActive = false;
+                        oneTracer.tracer = new QCPItemTracer(this);
+                        oneTracer.tracer->setGraph(graph);
+                        oneTracer.tracer->setInterpolating(false);
+                        oneTracer.tracer->setStyle(QCPItemTracer::tsCrosshair);
+                        oneTracer.tracer->setSize(6);
+                        oneTracer.tracer->setVisible(oneTracer.isActive);
 
-                m_tracers.append(oneTracer);
+                        oneTracer.label = new QCPItemText(this);
+                        oneTracer.label->setPositionAlignment(Qt::AlignLeft|Qt::AlignBottom);
+                        oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
+                        oneTracer.label->position->setCoords(10,-5);
+                        oneTracer.label->setText(QString("Point %1").arg(i));
+                        oneTracer.label->setTextAlignment(Qt::AlignLeft);
+                        oneTracer.label->setFont(QFont(font().family(), 9));
+                        oneTracer.label->setPen(QPen(Qt::black));
+                        oneTracer.label->setBrush(QBrush(QColor(255,255,255,200)));
+                        oneTracer.label->setPadding(QMargins(3, 1, 3, 1));
+                        oneTracer.label->setVisible(oneTracer.isActive);
+                    }
+                    m_tracers.append(oneTracer);
+                }
             }
         }
         //已初始化后更新追踪器（翻页或拖拽时）
-        else if(36 == this->graphCount() && m_initial)
+        else if(m_initial && graphSize <= m_tracers.size())
         {
-            for(int i=0;i<36;i++)
+            for(int i=0;i<graphSize;i++)
             {
                 TracerInfo& oneTracer = m_tracers[i];
                 QCPGraph* graph = this->graph(i);
@@ -215,7 +229,8 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
             double y = yAxis->pixelToCoord(pos.y());
             int selectIndex = 0;
             double minDistance = std::numeric_limits<double>::max();
-            for(int i=0;i<36;i++)
+
+            for(int i=0;i<graphSize;i++)
             {
                 TracerInfo& oneTracer = m_tracers[i];
                 oneTracer.tracer->setGraphKey(x);
@@ -246,11 +261,13 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
             double tracerY = oneTracer.tracer->position->value();
             //标牌显示内容
             QString info = "";
-            int probeNum = (m_currentIndex)/6+1;
-            int sensorNum = m_currentIndex%6+1;
+            int indexInbox = m_currentIndex%36;
+            int boxNum = m_currentIndex/36+1;
+            int probeNum = (indexInbox)/6+1;
+            int sensorNum = indexInbox%6+1;
             //利用图表标题记录是那一类型数据
             double magnetic = 0.0;
-            magnetic = tracerY - (probeNum-1)*6 - (sensorNum-1);
+            magnetic = tracerY - (boxNum-1)*36 - (probeNum-1)*6 - (sensorNum-1);
             if("霍尔X轴" == m_titleText)
             {
                 magnetic = magnetic*plotProcess::getInstance()->hallUpperLimitXY/50;
@@ -266,8 +283,8 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
             else if("涡流" == m_titleText)
             {}
             //刷新标牌显示
-            info = QString("探头:%1 传感器:%2 %3\n位置:%4 磁场强度:%5").arg(probeNum).arg(sensorNum)
-                    .arg(m_titleText).arg(x).arg(magnetic);
+            info = QString("传感器盒:%1 探头:%2 传感器:%3 \n%4 位置:%5 磁场强度:%6").arg(boxNum).arg(probeNum)
+                    .arg(sensorNum).arg(m_titleText).arg(x).arg(magnetic);
             oneTracer.label->setText(info);
 
             this->replot();

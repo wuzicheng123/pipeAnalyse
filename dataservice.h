@@ -11,8 +11,8 @@ class dataService : public QObject
 {
     Q_OBJECT
 public: 
-    //key:1-6  对应探头一到六
-    QMap<int,QVector<dataModel>>m_dataModel;
+    //key:1-6  对应探头一到六（多个盒子读取数据构成一个向量）
+    QVector<QMap<int,QVector<dataModel>>>m_dataModelVec;
     static dataService* getInstance();
     //对m_dataModel中数据读写时加读写锁，写独占，读多个
     QReadWriteLock m_dataRwLock;
@@ -29,11 +29,13 @@ public:
     void setMainWindow(MainWindow* exMainW);
 
 signals:
-    void dataModel2PlotProcess(QMap<int,QVector<dataModel>>&qmDataModel,QMap<int,QVector<dataModel>>onePreData,qint64 startPos);
+    //更新为按盒子堆叠展示的模式解析，因此多嵌套一层QVector
+    void dataModel2PlotProcessBybox(QVector<QMap<int,QVector<dataModel>>>&qmDataModelVec,QVector<QMap<int,QVector<dataModel>>>&onePreDatavec,qint64 startPos);
 
 public slots:
     //startPos是窗体显示的开始位置（划分刻度为整体）
     //由于mainwindow中限制，startPos取值范围：>=0
+    //boxDirPath每个采集盒的完整路径vec，curFileNamevec每个盒子下当前所读文件vec，二者结合为每个盒子下当前所读文件
     void handleModelDataRequest(QString& qsfilePath, qint64 startPos, qint64 offset);
 
 private:

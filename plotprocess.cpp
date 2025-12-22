@@ -18,184 +18,198 @@ plotProcess *plotProcess::getInstance()
     return m_instance;
 }
 
+//vec为增加盒子逻辑，按盒子顺序存入vec中
 //interval,采样间隙mm
 //qmDataModel的key 123456 对应探头123456
 //qmCPData的key 1234对应HallX-Y-Z-Vortex四种视图
 //qmCPData的value是二维数组，1-6行对应探头一的6个传感器，7-12行对应探头二的6个传感器，以此类推
-int plotProcess::dataModel2PlotData(QMap<int, QVector<dataModel> > &qmDataModel, QMap<int, QVector<QVector<QCPGraphData> >> &qmCPData)
+int plotProcess::dataModel2PlotDataBybox(QVector<QMap<int, QVector<dataModel> > > &qmDataModelvec, QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec)
 {
-    QMap<int,QVector<dataModel>>::iterator itMap = qmDataModel.begin();
-    for(;itMap != qmDataModel.end();itMap++)
+    for(int i=0;i<qmDataModelvec.size();i++)
     {
-        switch (itMap.key()){
-        case 1:{   //探头一
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
+        QMap<int,QVector<dataModel>>&qmDataModel = qmDataModelvec[i];
+        QMap<int,QVector<QVector<QCPGraphData>>> qmCPData;
+
+        QMap<int,QVector<dataModel>>::iterator itMap = qmDataModel.begin();
+        for(;itMap != qmDataModel.end();itMap++)
+        {
+            switch (itMap.key()) {
+            case 1:{   //探头一
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            case 2:{   //探头二
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            case 3:{   //探头三
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            case 4:{   //探头四
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            case 5:{   //探头五
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            case 6:{   //探头六
+                QVector<dataModel>& oneModelVec = itMap.value();
+                int rowOffset = (itMap.key()-1)*6;
+                dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
+                break;
+            }
+            default:
+            {}
+            }
         }
-        case 2:{   //探头二
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
-        }
-        case 3:{   //探头三
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
-        }
-        case 4:{   //探头四
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
-        }
-        case 5:{   //探头五
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
-        }
-        case 6:{   //探头六
-            QVector<dataModel>& oneModelVec = itMap.value();
-            int rowOffset = (itMap.key()-1)*6;
-            dataModel2PlotDataByProbe(oneModelVec,qmCPData,rowOffset);
-            break;
-        }
-        default:
-        {}
-        }
+        qmCPDatavec.append(qmCPData);
     }
-    //emit信号发送数据去画图
     return 0;
 }
 
 //从大变小，然后恢复，区间内的值：  16320  -16000      2*16383.5-16000=16767
 //从小变大，然后恢复，区间内的值：  -16000 16320       16320-2*16383.5=-16477
-void plotProcess::dataPreProcessing(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData,QMap<int, QVector<QVector<QCPGraphData> > > &qmPreCPData,qint64 startPos)
+void plotProcess::dataPreProcessingBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec, QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmPreCPDatavec, qint64 startPos)
 {
     double thresholdforXY = 6000;
     double thresholdforZ = 3000;
-    //文件中的第一帧数据时(0 == startPos)，m_preCPData设置为第一帧数据
-    //(startPos <= 0)时，用qmPreCPData给m_preCPData赋初值，qmPreCPData为全文前一帧数据
-    if(startPos <= 0)
+    int boxSize = qmCPDatavec.size();
+    for(int kk=0;kk<boxSize;kk++)
     {
-        //恢复m_preProcessFlag初始状态
-        initalPlotProcess();
-        //给m_preCPData赋初值
-        for (int i=1 ; i<=3 ; i++)
+        QMap<int, QVector<QVector<QCPGraphData>>>&qmCPData = qmCPDatavec[kk];
+        //文件中的第一帧数据时(0 == startPos)，m_preCPData设置为第一帧数据
+        //(startPos <= 0)时，用qmPreCPData给m_preCPData赋初值，qmPreCPData为全文前一帧数据
+        if(startPos <= 0)
         {
-            if(qmCPData.end() != qmCPData.find(i))
+            //恢复m_preProcessFlagBybox初始状态
+            initalPlotProcess();
+            //给m_preCPDataBybox赋初值
+            QMap<int,QVector<QCPGraphData>>().swap(m_preCPData);
+            for (int i=1 ; i<=3 ; i++)
             {
-                QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
-                int iSize = valueVec2D.size();
-                for(int j=0;j<iSize;j++)
+                if(qmCPData.end() != qmCPData.find(i))
                 {
-                    QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
-                    if(valueVec1D.size() > 0)
+                    QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
+                    int iSize = valueVec2D.size();
+                    for(int j=0;j<iSize;j++)
                     {
-                        if(m_preCPData.end() != m_preCPData.find(i))
+                        QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
+                        if(valueVec1D.size() > 0)
                         {
-                            QVector<QCPGraphData>& preCPDataVec = m_preCPData[i];
-                            preCPDataVec.append(valueVec1D[0]);
+                            if(m_preCPData.end() != m_preCPData.find(i))
+                            {
+                                QVector<QCPGraphData>& preCPDataVec = m_preCPData[i];
+                                preCPDataVec.append(valueVec1D[0]);
+                            }
+                            else {
+                                QVector<QCPGraphData> preCPDataVec;
+                                preCPDataVec.append(valueVec1D[0]);
+                                m_preCPData.insert(i,preCPDataVec);
+                            }
                         }
-                        else {
-                            QVector<QCPGraphData> preCPDataVec;
-                            preCPDataVec.append(valueVec1D[0]);
-                            m_preCPData.insert(i,preCPDataVec);
+                    }
+                }
+            }
+            //从k=1开始比较
+            for (int i=1 ; i<=3 ; i++)
+            {
+                if(qmCPData.end() != qmCPData.find(i))
+                {
+                    QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
+                    int iSize = valueVec2D.size();
+                    for(int j=0;j<iSize;j++)
+                    {
+                        QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
+                        int vec1DSize = valueVec1D.size();
+                        QCPGraphData& preData = m_preCPData[i][j];
+                        quint8& transFlag = m_preProcessFlag[i][j];
+                        for(int k=1;k<vec1DSize;k++)
+                        {
+                            QCPGraphData& currentData = valueVec1D[k];
+                            //一个通道一个通道比较，36个通道，而后每通道逐一记录前一帧数据
+                            if(3 != i)  //X和Y轴
+                            {
+                                dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforXY,hallUpperLimitXY,hallLowerLimitXY);
+                            }
+                            // 3==i
+                            else {     //Z轴
+                                dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforZ,hallUpperLimitZ,hallLowerLimitZ);
+                            }
                         }
                     }
                 }
             }
         }
-        //从k=1开始比较
-        for (int i=1 ; i<=3 ; i++)
+        // startPos>0
+        else
         {
-            if(qmCPData.end() != qmCPData.find(i))
+            //恢复m_preProcessFlag初始状态
+            initalPlotProcess();
+            //用qmPreCPData给m_preCPData赋初值
+            QMap<int,QVector<QCPGraphData>>().swap(m_preCPData);
+            QMap<int, QVector<QVector<QCPGraphData>>>&qmPreCPData = qmPreCPDatavec[kk];
+            for (int i=1 ; i<=3 ; i++)
             {
-                QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
-                int iSize = valueVec2D.size();
-                for(int j=0;j<iSize;j++)
+                if(qmPreCPData.end() != qmPreCPData.find(i))
                 {
-                    QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
-                    int vec1DSize = valueVec1D.size();
-                    QCPGraphData& preData = m_preCPData[i][j];
-                    quint8& transFlag = m_preProcessFlag[i][j];
-                    for(int k=1;k<vec1DSize;k++)
+                    QVector<QVector<QCPGraphData>>& valueVec2D = qmPreCPData[i];
+                    int iSize = valueVec2D.size();
+                    for(int j=0;j<iSize;j++)
                     {
-                        QCPGraphData& currentData = valueVec1D[k];
-                        //一个通道一个通道比较，36个通道，而后每通道逐一记录前一帧数据
-                        if(3 != i)  //X和Y轴
+                        QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
+                        if(valueVec1D.size() > 0)
                         {
-                            dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforXY,hallUpperLimitXY,hallLowerLimitXY);
-                        }
-                        // 3==i
-                        else {     //Z轴
-                            dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforZ,hallUpperLimitZ,hallLowerLimitZ);
+                            if(m_preCPData.end() != m_preCPData.find(i))
+                            {
+                                QVector<QCPGraphData>& preCPDataVec = m_preCPData[i];
+                                preCPDataVec.append(valueVec1D[0]);
+                            }
+                            else {
+                                QVector<QCPGraphData> preCPDataVec;
+                                preCPDataVec.append(valueVec1D[0]);
+                                m_preCPData.insert(i,preCPDataVec);
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-    // startPos>0
-    else
-    {
-        //恢复m_preProcessFlag初始状态
-        initalPlotProcess();
-        //用qmPreCPData给m_preCPData赋初值
-        QMap<int,QVector<QCPGraphData>>().swap(m_preCPData);
-        for (int i=1 ; i<=3 ; i++)
-        {
-            if(qmPreCPData.end() != qmPreCPData.find(i))
+            //从k=0开始比较
+            for (int i=1 ; i<=3 ; i++)
             {
-                QVector<QVector<QCPGraphData>>& valueVec2D = qmPreCPData[i];
-                int iSize = valueVec2D.size();
-                for(int j=0;j<iSize;j++)
+                if(qmCPData.end() != qmCPData.find(i))
                 {
-                    QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
-                    if(valueVec1D.size() > 0)
+                    QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
+                    int iSize = valueVec2D.size();
+                    for(int j=0;j<iSize;j++)
                     {
-                        if(m_preCPData.end() != m_preCPData.find(i))
+                        QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
+                        int vec1DSize = valueVec1D.size();
+                        QCPGraphData& preData = m_preCPData[i][j];
+                        quint8& transFlag = m_preProcessFlag[i][j];
+                        for(int k=0;k<vec1DSize;k++)
                         {
-                            QVector<QCPGraphData>& preCPDataVec = m_preCPData[i];
-                            preCPDataVec.append(valueVec1D[0]);
-                        }
-                        else {
-                            QVector<QCPGraphData> preCPDataVec;
-                            preCPDataVec.append(valueVec1D[0]);
-                            m_preCPData.insert(i,preCPDataVec);
-                        }
-                    }
-                }
-            }
-        }
-        //从k=0开始比较
-        for (int i=1 ; i<=3 ; i++)
-        {
-            if(qmCPData.end() != qmCPData.find(i))
-            {
-                QVector<QVector<QCPGraphData>>& valueVec2D = qmCPData[i];
-                int iSize = valueVec2D.size();
-                for(int j=0;j<iSize;j++)
-                {
-                    QVector<QCPGraphData>& valueVec1D = valueVec2D[j];
-                    int vec1DSize = valueVec1D.size();
-                    QCPGraphData& preData = m_preCPData[i][j];
-                    quint8& transFlag = m_preProcessFlag[i][j];
-                    for(int k=0;k<vec1DSize;k++)
-                    {
-                        QCPGraphData& currentData = valueVec1D[k];
-                        //一个通道一个通道比较，36个通道，而后每通道逐一记录前一帧数据
-                        if(3 != i)  //X和Y轴
-                        {
-                            dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforXY,hallUpperLimitXY,hallLowerLimitXY);
-                        }
-                        // 3==i
-                        else {     //Z轴
-                            dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforZ,hallUpperLimitZ,hallLowerLimitZ);
+                            QCPGraphData& currentData = valueVec1D[k];
+                            //一个通道一个通道比较，36个通道，而后每通道逐一记录前一帧数据
+                            if(3 != i)  //X和Y轴
+                            {
+                                dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforXY,hallUpperLimitXY,hallLowerLimitXY);
+                            }
+                            // 3==i
+                            else {     //Z轴
+                                dataPreProcessOnePoint(preData,currentData,transFlag,thresholdforZ,hallUpperLimitZ,hallLowerLimitZ);
+                            }
                         }
                     }
                 }
@@ -502,6 +516,7 @@ float plotProcess::convert2float(quint16 &raw, quint8 Axis, quint8 gain_sel, qui
 
 void plotProcess::initalPlotProcess()
 {
+    QMap<int,QVector<quint8>>().swap(m_preProcessFlag);
     QVector<quint8>oneVector(36,0);
     for(int i=1;i<=3;i++)
     {
@@ -509,37 +524,37 @@ void plotProcess::initalPlotProcess()
     }
 }
 
-void plotProcess::handledataModel2PlotProcess(QMap<int, QVector<dataModel> > &qmDataModel,QMap<int,QVector<dataModel>>onePreData,qint64 startPos)
+void plotProcess::handledataModel2PlotProcessBybox(QVector<QMap<int, QVector<dataModel> > > &qmDataModelVec, QVector<QMap<int, QVector<dataModel> > > &onePreDatavec, qint64 startPos)
 {
     //添加读写锁
     dataService::getInstance()->m_dataRwLock.lockForRead();
-    QMap<int,QVector<QVector<QCPGraphData>>>().swap(m_CPData);
-    dataModel2PlotData(qmDataModel,m_CPData);
+    QVector<QMap<int,QVector<QVector<QCPGraphData>>>>().swap(m_CPDataVec);
+    dataModel2PlotDataBybox(qmDataModelVec,m_CPDataVec);
     //预处理求前一帧数据
-    QMap<int,QVector<QVector<QCPGraphData>>>onePreCPData;
+    QVector<QMap<int,QVector<QVector<QCPGraphData>>>>onePreCPDataVec;
     if(startPos > 0)
     {
-        dataModel2PlotData(onePreData,onePreCPData);
+        dataModel2PlotDataBybox(onePreDatavec,onePreCPDataVec);
     }
     //数据预处理（过滤异常数据）
-    dataPreProcessing(m_CPData,onePreCPData,startPos);
+    dataPreProcessingBybox(m_CPDataVec,onePreCPDataVec,startPos);
     dataService::getInstance()->m_dataRwLock.unlock();
     //emit数据发送到mainwindow
-    emit plotDataReady(m_CPData);
+    emit plotDataReadyBybox(m_CPDataVec);
 }
 
-void plotProcess::handleplotCacheDataRequest()
+void plotProcess::handleplotCacheDataRequestBybox()
 {
-    if(!m_CPData.empty())
+    if(!m_CPDataVec.empty())
     {
-        emit plotDataReady(m_CPData);
+        emit plotDataReadyBybox(m_CPDataVec);
     }
 }
 
 plotProcess::plotProcess(QObject *parent) : QObject(parent)
 {
-    qRegisterMetaType<QMap<int,QVector<dataModel>>>("QMap<int,QVector<dataModel>>&");
-    connect(dataService::getInstance(),&dataService::dataModel2PlotProcess,this,&plotProcess::handledataModel2PlotProcess);
+    qRegisterMetaType<QVector<QMap<int,QVector<dataModel>>>>("QVector<QMap<int,QVector<dataModel>>>&");
+    connect(dataService::getInstance(),&dataService::dataModel2PlotProcessBybox,this,&plotProcess::handledataModel2PlotProcessBybox);
 
     // gain steps derived from datasheet section 15.1.4 tables
     gain_multipliers[0] = 5.f;

@@ -151,6 +151,31 @@ QHeaderView::section {
             <number>0</number>
            </property>
            <item>
+            <widget class="QLabel" name="prjNamelabel">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>250</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -255,7 +280,7 @@ QHeaderView::section {
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>325</width>
+               <width>225</width>
                <height>13</height>
               </size>
              </property>

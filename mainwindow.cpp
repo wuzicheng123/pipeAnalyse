@@ -8,6 +8,7 @@
 #include <QElapsedTimer>
 #include "msgbox.h"
 #include "newuserdlg.h"
+#include "projectdlg.h"
 #include <QDir>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -17,10 +18,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle("管道分析软件");
 
-    qRegisterMetaType<QMap<int, QVector<QVector<QCPGraphData>>>>("QMap<int, QVector<QVector<QCPGraphData>>>&");
+    qRegisterMetaType<QVector<QMap<int,QVector<QVector<QCPGraphData>>>>>("QVector<QMap<int,QVector<QVector<QCPGraphData>>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
-    connect(this,&MainWindow::plotCacheDataRequest,plotProcess::getInstance(),&plotProcess::handleplotCacheDataRequest);
-    connect(plotProcess::getInstance(),&plotProcess::plotDataReady,this,&MainWindow::handlePlotDataReady); 
+    connect(this,&MainWindow::plotCacheDataRequestBybox,plotProcess::getInstance(),&plotProcess::handleplotCacheDataRequestBybox);
+    connect(plotProcess::getInstance(),&plotProcess::plotDataReadyBybox,this,&MainWindow::handlePlotDataReadyBybox);
     if(nullptr == CprjConfig)
     {
         CprjConfig = new projectConfigure;
@@ -78,7 +79,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->projectTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     // 设置列宽
     ui->projectTableView->horizontalHeader()->setStretchLastSection(true);
-    ui->projectTableView->setColumnWidth(0, ui->projectTableView->size().width()/6);
+    ui->projectTableView->setColumnWidth(0, 100);
+    ui->projectTableView->setColumnWidth(4, 180);
     // 设置表格样式
     ui->projectTableView->setAlternatingRowColors(true);
     ui->projectTableView->verticalHeader()->setVisible(false);
@@ -128,18 +130,22 @@ void MainWindow::hideForm()
     ui->stackedWidget->hide();
 }
 
-void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd,MyCustomPlot *& plotBoard,int axis)
+void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd,MyCustomPlot *& plotBoard,int axis,int boxNum,int boxSize)
 {
     int RowSize = QcpData2D.size();
     //查找36个通道的最大最小值
     //并进行归一化到-50-50转换
     double ymin = 0,ymax = 0;
+    //乘以采样间隔
+    double xRealLower = windowStart*CprjConfig->dInterval;
+    double xRealHigher = windowEnd*CprjConfig->dInterval;
     for(int i=0;i<RowSize;i++)
     {
         int ColumnSize = QcpData2D[i].size();
         for(int j=0;j<ColumnSize;j++)
         {
             double& dy = QcpData2D[i][j].value;
+            QcpData2D[i][j].key = QcpData2D[i][j].key*CprjConfig->dInterval;
             //归一化
             //等距通道显示样式 每个通道value值映射到2，例如通道一为-50到50，通道二为-49到51，。。。。，通道36为-15到85。
             if(1 == axis || 2 == axis)
@@ -152,7 +158,7 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
             }
             if(windowStart >= 0)
             {
-                QcpData2D[i][j].key += windowStart;
+                QcpData2D[i][j].key += xRealLower;
             }
             if(dy<ymin)
             {
@@ -162,20 +168,30 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
             {
                 ymax = dy;
             }
-            dy = dy + i;   //给每个探头增加偏移量，从而36个探头一张图显示
+            //给每个探头增加偏移量，从而每个盒子的36个探头一张图显示
+            //45为36通道+间隔美观20行
+            //按box号调整
+            dy = dy + i + 36*boxNum;
         }
     }
 
-    plotBoard->xAxis->setLabel("帧数");
+    plotBoard->xAxis->setLabel("距离");
     plotBoard->yAxis->setLabel("通道");
-    plotBoard->xAxis->setRange(windowStart,windowEnd);
-    double yRangeMax = ymax + 35 + 1; //上下留1的余量
-    double yRangeMin = ymin - 1;
+    plotBoard->xAxis->setRange(xRealLower,xRealHigher);
+    double yRangeMax = 36*boxSize+20;
+    double yRangeMin = -20 ;
     plotBoard->yAxis->setRange(yRangeMin,yRangeMax);
     if(0 == CwindowDisp->yLower && 0 == CwindowDisp->yUpper)
     {
-        CwindowDisp->yLower = -4;
-        CwindowDisp->yUpper = 38;
+        if(yRangeMax > 36+20)
+        {
+            CwindowDisp->yUpper = 36*boxSize+20;
+            CwindowDisp->yLower = -20;
+        }
+        else {
+            CwindowDisp->yUpper = 38;
+            CwindowDisp->yLower = -4;
+        }
         plotBoard->yAxis->setRange(CwindowDisp->yLower,CwindowDisp->yUpper);
     }
     else {
@@ -187,19 +203,19 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
     pen.setWidth(CwindowDisp->penWidth);
     for(int i=0;i<RowSize;i++)
     {
-        if(plotBoard->graphCount() < 36)
+        if(plotBoard->graphCount() < 36*(boxNum+1))
         {
             plotBoard->addGraph();
         }
-        plotBoard->graph(i)->setPen(pen);
-        QSharedPointer<QCPGraphDataContainer>dataContainer = plotBoard->graph(i)->data();
+        plotBoard->graph(36*boxNum+i)->setPen(pen);
+        QSharedPointer<QCPGraphDataContainer>dataContainer = plotBoard->graph(36*boxNum+i)->data();
         dataContainer->clear();
         dataContainer->set(QcpData2D[i],true);
     }
     plotBoard->replot();
 }
 
-void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard)
+void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard,int boxNum,int boxSize)
 {
     switch (sensorType)   //一个窗口
     {
@@ -207,7 +223,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(1) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1);
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize);
             }
             break;
         }
@@ -215,7 +231,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(2) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2);
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize);
             }
             break;
         }
@@ -223,7 +239,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(3) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3);
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize);
             }
             break;
         }
@@ -231,7 +247,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(4) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4);
+                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize);
             }
             break;
         }
@@ -447,42 +463,58 @@ void MainWindow::initialDatabase()
         connect(this,&MainWindow::queryProjectById,m_dbWorker,&databaseWorker::handleQueryProjectById);
         qRegisterMetaType<projectDataModel>("projectDataModel&");
         connect(m_dbWorker,&databaseWorker::qryProjectByIdResult,this,&MainWindow::handleQryProjectByIdResult);
+        connect(m_dbWorker,&databaseWorker::showAddNewProject,this,&MainWindow::handleShowAddNewProject);
+        connect(m_dbWorker,&databaseWorker::showEditProject,this,&MainWindow::handleShowEditProject);
+        connect(this,&MainWindow::deleteProjectRequest,m_dbWorker,&databaseWorker::handleDeleteProjectRequest);
         thread->start();
     }
 }
 
-int MainWindow::handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData)
+int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec)
 {
     dataService::getInstance()->m_dataRwLock.lockForRead();
     QElapsedTimer qElapTimer;
     qElapTimer.start();
-    if(qmCPData.empty())  //辅助空参数情况坐标轴翻页效果
+    if(!qmCPDatavec.isEmpty())
     {
-        QVector<QVector<QCPGraphData>> oneVector2D;
-        for (int i=1;i<=4;i++) {
-            qmCPData.insert(i,oneVector2D);
-        }
-    }
-    //绘制磁力曲线
-    QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
-    vecMyCP.append(ui->QcpText_1);
-    vecMyCP.append(QcpText_2);
-    vecMyCP.append(QcpText_3);
-    vecMyCP.append(QcpText_4);
-    //根据窗口数量，循环刷新
-    for(int i=0;i<CwindowDisp->windNum;i++)
-    {
-        if(1 == CwindowDisp->windPlotType[i]) //曲线图
+        //辅助空参数情况坐标轴翻页效果
+        int boxSize = qmCPDatavec.size();
+        for(int k=0;k<boxSize;k++)
         {
-            plotbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i]);
+            QMap<int, QVector<QVector<QCPGraphData>>>&qmCPData = qmCPDatavec[k];
+            if(qmCPData.isEmpty())
+            {
+                QVector<QVector<QCPGraphData>> oneVector2D;
+                for (int i=1;i<=4;i++) {
+                    qmCPData.insert(i,oneVector2D);
+                }
+            }
         }
-        else if(2 == CwindowDisp->windPlotType[i]) //灰度图
+        //绘制磁力曲线
+        QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
+        vecMyCP.append(ui->QcpText_1);
+        vecMyCP.append(QcpText_2);
+        vecMyCP.append(QcpText_3);
+        vecMyCP.append(QcpText_4);
+        for(int k=0;k<boxSize;k++)
         {
+            QMap<int, QVector<QVector<QCPGraphData>>>&qmCPData = qmCPDatavec[k];
+            //根据窗口数量，循环刷新
+            for(int i=0;i<CwindowDisp->windNum;i++)
+            {
+                if(1 == CwindowDisp->windPlotType[i]) //曲线图
+                {
+                    plotbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize);
+                }
+                else if(2 == CwindowDisp->windPlotType[i]) //灰度图
+                {
 
-        }
-        else if(3 == CwindowDisp->windPlotType[i]) //彩色图
-        {
+                }
+                else if(3 == CwindowDisp->windPlotType[i]) //彩色图
+                {
 
+                }
+            }
         }
     }
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
@@ -499,7 +531,7 @@ void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *win
         CwindowDisp->windSensorType[i]=windSensorType[i];
     }
     setMutiWindow(CwindowDisp->windNum);
-    emit plotCacheDataRequest();
+    emit plotCacheDataRequestBybox();
     if(nullptr != windPlotType)
     {
         delete[] windPlotType;
@@ -625,44 +657,96 @@ void MainWindow::handleQryProjectByIdResult(projectDataModel &onePrj)
         CprjConfig->dataDirPath = "";
         return;
     }
+    QVector<QMap<QString,int>>().swap(CprjConfig->fileNameBytesMapByBox);
 
-    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
-
-    //获取文件夹下文件名
-    int bytesNum = 0;
-    QString qsfilePath="";
-    QStringList filters = {"*.bin"};
-    QFileInfoList files = dir.entryInfoList(filters,QDir::Files,QDir::Name);
-    if(files.isEmpty())
+    //获取文件夹下box子文件夹，及box文件夹内的文件名
+    QFileInfoList folderInfos = dir.entryInfoList(QDir::Dirs|QDir::NoDotAndDotDot,
+                                                  QDir::Name|QDir::IgnoreCase);
+    for(const QFileInfo &info:folderInfos)
     {
-        msgBox::show("告警","打开项目错误，无符合命名要求的数据文件",2);
+        QString absolutePath = info.absoluteFilePath()+"/";
+        CprjConfig->boxDirPath.append(absolutePath);
+    }
+
+    int boxNum = CprjConfig->boxDirPath.size();
+    if(0 == boxNum)
+    {
+        msgBox::show("告警","文件格式错误，盒子文件夹不存在",2);
+        QVector<QString>().swap(CprjConfig->boxDirPath);
         CprjConfig->dataDirPath = "";
         return;
     }
-    for (const QFileInfo &file : files) {
-        QString fileName = file.fileName();
-        CprjConfig->fileNameVec.append(fileName);
-        QString subString = fileName.mid(9,3);
-        int result = QString::compare("000",subString);
-        if(0 == result)
+    for(int i=0;i<boxNum;i++)
+    {
+        int bytesNum = 0;
+        QString boxPath = CprjConfig->boxDirPath[i];
+        QDir boxDir(boxPath);
+        QString qsfilePath="";
+        QStringList filters = {"*.bin"};
+        QFileInfoList files = boxDir.entryInfoList(filters,QDir::Files,QDir::Name);
+        if(files.isEmpty())
         {
-            CprjConfig->curFileName = file.fileName();
-            qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+            msgBox::show("告警",QString("打开项目错误，盒子:%1路径下无数据文件").arg(boxPath),2);
+            CprjConfig->dataDirPath = "";
+            QVector<QString>().swap(CprjConfig->boxDirPath);
+            return;
         }
-        //查询每个文件的帧数
-        bytesNum = static_cast<int>(file.size());
-        int frameNum = (bytesNum-20)/268;
-        CprjConfig->fileNameBytesMap.insert(fileName,frameNum);
+        QVector<QString>filenameVec;
+        QMap<QString,int>fileNameBytesMap;
+        for (const QFileInfo &file : files) {
+            QString fileName = file.fileName();
+            filenameVec.append(fileName);
+            QString subString = fileName.mid(9,3);
+            int result = QString::compare("000",subString);
+            if(0 == result)
+            {
+                CprjConfig->curFileNamevec.append(file.fileName());
+            }
+            //查询每个文件的帧数
+            bytesNum = static_cast<int>(file.size());
+            int frameNum = (bytesNum-20)/268;
+            fileNameBytesMap.insert(fileName,frameNum);
+        }
+        CprjConfig->fileNameVecByBox.append(filenameVec);
+        CprjConfig->fileNameBytesMapByBox.append(fileNameBytesMap);
     }
     CprjConfig->dInterval = onePrj.sampleinterval;
+    ui->prjNamelabel->setText("当前项目:"+onePrj.name);
     ui->openPrj->setEnabled(false);
     ui->closePrj->setEnabled(true);
 }
 
+void MainWindow::handleShowAddNewProject(projectDataModel &onePrj)
+{
+    QList<QStandardItem*>rowItems;
+    QStandardItem* prjNameItem = new QStandardItem(onePrj.name);
+    prjNameItem->setData(onePrj.id,Qt::UserRole+1);
+    QStandardItem* discriptItem = new QStandardItem(onePrj.discript);
+    QStandardItem* wallthicknessItem = new QStandardItem(onePrj.wallthicknesstype);
+    QStandardItem* sampleintervalItem = new QStandardItem(QString::number(onePrj.sampleinterval));
+    QStandardItem* createtimeItem = new QStandardItem(onePrj.createtime);
+    QStandardItem* creatorNameItem = new QStandardItem(onePrj.creatorName);
+    rowItems<<prjNameItem;
+    rowItems<<discriptItem;
+    rowItems<<wallthicknessItem;
+    rowItems<<sampleintervalItem;
+    rowItems<<createtimeItem;
+    rowItems<<creatorNameItem;
+    prjTableModel->appendRow(rowItems);
+}
+
+void MainWindow::handleShowEditProject(int row, projectDataModel &onePrj)
+{
+    prjTableModel->item(row,0)->setText(onePrj.name);
+    prjTableModel->item(row,1)->setText(onePrj.discript);
+    prjTableModel->item(row,2)->setText(onePrj.wallthicknesstype);
+    prjTableModel->item(row,3)->setText(QString::number(onePrj.sampleinterval));
+}
+
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
 {
-   CwindowDisp->startPos = xLower;
-   CwindowDisp->offset = xUpper - CwindowDisp->startPos;
+   CwindowDisp->startPos = static_cast<qint64>(xLower/CprjConfig->dInterval);
+   CwindowDisp->offset = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
    CwindowDisp->yLower = yLower;
    CwindowDisp->yUpper = yUpper;
 
@@ -674,16 +758,16 @@ void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLowe
        startPosInFile = 0;
    }
    else {
-       startPosInFile = xLower;
+       startPosInFile = static_cast<qint64>(xLower/CprjConfig->dInterval);
    }
 
    if(xLower < 0 && xUpper > 0)
    {
-       offsetInfile = xUpper;
+       offsetInfile = static_cast<qint64>(xUpper/CprjConfig->dInterval);
    }
    else if(xLower >0 && xUpper>0)
    {
-       offsetInfile = xUpper - xLower;
+       offsetInfile = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
    }
    else {
        offsetInfile = 0;
@@ -691,9 +775,9 @@ void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLowe
 
    //超出Int范围不处理
    qint64 iSum = startPosInFile + offsetInfile;
-   if(iSum>0)
+   if(iSum>=0)
    {
-       QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+       QString qsfilePath = "";
        emit modelDataRequest(qsfilePath,startPosInFile,offsetInfile);
        //未来多窗口显示触发改动在此处
    }
@@ -712,7 +796,8 @@ void MainWindow::on_plotWindow_triggered()
     //emit
     if(CwindowDisp->bFirstPlot)
     {
-        QString qsfilePath=CprjConfig->dataDirPath+CprjConfig->curFileName;
+        //无需传入qsfilePath，在槽函数中会拼接生成
+        QString qsfilePath = "";
         setMutiWindow(CwindowDisp->windNum);
         emit modelDataRequest(qsfilePath,CwindowDisp->startPos,CwindowDisp->offset);
         CwindowDisp->bFirstPlot = false;
@@ -722,7 +807,7 @@ void MainWindow::on_plotWindow_triggered()
 void MainWindow::on_nextPageBtn_clicked()
 {
     CwindowDisp->startPos += CwindowDisp->offset;
-    QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+    QString qsfilePath = "";
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)
     {
@@ -740,7 +825,7 @@ void MainWindow::on_nextPageBtn_clicked()
 void MainWindow::on_previousPageBtn_clicked()
 {
     CwindowDisp->startPos -= CwindowDisp->offset;
-    QString qsfilePath = CprjConfig->dataDirPath+CprjConfig->curFileName;
+    QString qsfilePath = "";
 
     if(CwindowDisp->startPos < 0 && CwindowDisp->startPos+CwindowDisp->offset > 0)
     {
@@ -821,9 +906,10 @@ void MainWindow::on_logout_triggered()
     CwindowDisp->windPlotType[0] = 1;
     CprjConfig->dInterval = 0;
     CprjConfig->dataDirPath = "";
-    CprjConfig->curFileName = "";
-    QVector<QString>().swap(CprjConfig->fileNameVec);
-    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
+    QVector<QString>().swap(CprjConfig->curFileNamevec);
+    QVector<QString>().swap(CprjConfig->boxDirPath);
+    QVector<QVector<QString>>().swap(CprjConfig->fileNameVecByBox);
+    QVector<QMap<QString,int>>().swap(CprjConfig->fileNameBytesMapByBox);
     ui->openPrj->setEnabled(true);
     ui->closePrj->setEnabled(false);
     emit initalWinNum();
@@ -919,17 +1005,92 @@ void MainWindow::on_openPrj_clicked()
 
 void MainWindow::on_closePrj_clicked()
 {
+    //画板恢复空白
+    setMutiWindow(1);
+    ui->QcpText_1->clearPlottables();    // 清除所有图形
+    ui->QcpText_1->clearItems();         // 清除所有图项
+    ui->QcpText_1->xAxis->setLabel("");  // 清除X轴标签
+    ui->QcpText_1->yAxis->setLabel("");  // 清除Y轴标签
+    ui->QcpText_1->replot();             // 重绘
+    setCPtittle(ui->QcpText_1,"");
+    CwindowDisp->bFirstPlot = true;
     CwindowDisp->startPos = 0;
     CwindowDisp->offset = 2000;
     CwindowDisp->yLower = 0;
     CwindowDisp->yUpper = 0;
     CwindowDisp->pageOffset = 1500;
+    for(int i=0;i<4;i++)
+    {
+        CwindowDisp->windSensorType[i]=0;
+        CwindowDisp->windPlotType[i]=0;
+    }
+    CwindowDisp->windNum = 1;
+    CwindowDisp->windSensorType[0] = 1;
+    CwindowDisp->windPlotType[0] = 1;
     CprjConfig->dInterval = 0;
     CprjConfig->dataDirPath = "";
-    CprjConfig->curFileName = "";
-    QVector<QString>().swap(CprjConfig->fileNameVec);
-    QMap<QString,int>().swap(CprjConfig->fileNameBytesMap);
-    CwindowDisp->bFirstPlot = true;
+    QVector<QString>().swap(CprjConfig->curFileNamevec);
+    QVector<QString>().swap(CprjConfig->boxDirPath);
+    QVector<QVector<QString>>().swap(CprjConfig->fileNameVecByBox);
+    QVector<QMap<QString,int>>().swap(CprjConfig->fileNameBytesMapByBox);
+
     ui->openPrj->setEnabled(true);
     ui->closePrj->setEnabled(false);
+    emit initalWinNum();
+}
+
+void MainWindow::on_newPrj_clicked()
+{
+    projectDlg* newPrjDlg = new projectDlg(this);
+    newPrjDlg->setAttribute(Qt::WA_DeleteOnClose);
+    qRegisterMetaType<projectDataModel>("projectDataModel&");
+    connect(newPrjDlg,&projectDlg::newProjectRequest,m_dbWorker,&databaseWorker::handleNewProjectRequest);
+    newPrjDlg->trans2newDlg();
+    newPrjDlg->setCurrentUser(*CcurrentUserMod);
+    newPrjDlg->exec();
+}
+
+void MainWindow::on_editPrj_clicked()
+{
+    QModelIndexList selectedIndexes = ui->projectTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    int projectId = prjTableModel->item(row,0)->data(Qt::UserRole+1).toInt();
+    QString prjName = prjTableModel->item(row,0)->text();
+    QString prjDescribe = prjTableModel->item(row,1)->text();
+    QString thicknessType = prjTableModel->item(row,2)->text();
+    double dInterval = prjTableModel->item(row,3)->text().toDouble();
+    projectDlg* prjEditDlg = new projectDlg(this);
+    prjEditDlg->setAttribute(Qt::WA_DeleteOnClose);
+    qRegisterMetaType<projectDataModel>("projectDataModel&");
+    connect(prjEditDlg,&projectDlg::editProjectRequest,m_dbWorker,&databaseWorker::handleEditProjectRequest);
+    prjEditDlg->trans2editDlg(projectId,prjName,prjDescribe,thicknessType,dInterval,"",row);
+    prjEditDlg->exec();
+}
+
+void MainWindow::on_deletePrj_clicked()
+{
+    QModelIndexList selectedIndexes = ui->projectTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    int projectId = prjTableModel->item(row,0)->data(Qt::UserRole+1).toInt();
+    QString projectName = prjTableModel->item(row,0)->text();
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this,"确认删除",QString("确定要删除项目'%1'吗").arg(projectName),
+                                  QMessageBox::Yes|QMessageBox::No);
+    if(QMessageBox::Yes == reply)
+    {
+        emit deleteProjectRequest(row,projectId);
+    }
+}
+
+void MainWindow::on_detailPrj_clicked()
+{
+
 }

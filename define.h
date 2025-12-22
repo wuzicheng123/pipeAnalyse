@@ -141,15 +141,16 @@ class projectConfigure
 {
 public:
     double dInterval;//采样间隔
-    QString dataDirPath;//当前文件夹路径
-    QVector<QString>fileNameVec;//文件夹下的文件名
-    QString curFileName;//当前读取数据的文件名
-    QMap<QString,int>fileNameBytesMap;//文件名--数据帧数
+    QString dataDirPath;//当前文件夹路径（顶层项目路径）
+    QVector<QString>boxDirPath;//每个盒子采集的数据，dataDirPath下的子目录（例如：101、102、。。。。）（完整路径）
+    QVector<QVector<QString>>fileNameVecByBox;//每个盒子下的文件名数组（.bin）
+    QVector<QMap<QString,int>>fileNameBytesMapByBox;//每个盒子下的文件名--数据帧数Map
+    QVector<QString>curFileNamevec;//每个盒子文件夹下当前读取的文件名
+
     projectConfigure()
     {
         dInterval = 0;
         dataDirPath = "";
-        curFileName = "";
     }
 };
 
@@ -158,8 +159,8 @@ class windowDisplay
 {
 public:
     bool bFirstPlot;//第一次绘制
-    qint64 startPos;//窗体显示波形数据起始点（可以为负数）
-    qint64 offset;//窗体显示波形所需数据长度
+    qint64 startPos;//窗体显示波形数据起始点（可以为负数）//(默认间隔为1，不涉及采样间隔，采样间隔仅在绘制/缩放时乘以)
+    qint64 offset;//窗体显示波形所需数据长度//(默认间隔为1，不涉及采样间隔，采样间隔仅在绘制/缩放时乘以)
     qint64 yLower;//y轴窗体显示区间下界
     qint64 yUpper;//y轴窗体显示区间上界
     qint64 pageOffset;//点击翻页按钮偏移量

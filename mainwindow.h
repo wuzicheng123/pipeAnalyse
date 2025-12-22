@@ -28,10 +28,11 @@ public:
     //windowStart-图表开始点,windowEnd-图表结束点
     //plotBoard - MyCustomPlot画板
     //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
-    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis);
+    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize);
     //handlePlotDataReady中的子函数
     //sensorType绘图传感器类型，qmCPData绘制数据，plotBoard画板
-    void plotbySensorType(int sensorType,QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData,MyCustomPlot*& plotBoard);
+    //boxNum为阿拉伯数字减一，循环变量
+    void plotbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
     //设置图表标题
@@ -52,16 +53,18 @@ public:
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
     //添加y轴的范围
+    //无需传入qsfilePath，在槽函数中会拼接生成,且当前所读文件会记录在curFileNamevec中
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
-    void plotCacheDataRequest();
+    void plotCacheDataRequestBybox();
     void initalWinNum();
     void queryAllUsers();
     void deleteUserRequest(int row,QString name);
     void queryAllProjects();
     void queryProjectById(int id);
+    void deleteProjectRequest(int row,int projectId);
 
 private slots:
-    int handlePlotDataReady(QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData);
+    int handlePlotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec);
     void handleWindowNumSetData(int windNum,int* windPlotType,int* windSensorType);
     void handleLoginResult(int id, QString name, QString password, QString permission);
     void handleQryAllUsersResult(QVector<userDataModel>&vecUsers);
@@ -70,7 +73,9 @@ private slots:
     void handleShowDeleteUser(int row);
     void handleQryAllPrjsResult(QVector<projectDataModel>&vecPrjs);
     void handleQryProjectByIdResult(projectDataModel& onePrj);
-
+    void handleShowAddNewProject(projectDataModel& onePrj);
+    void handleShowEditProject(int row,projectDataModel& onePrj);
+    //原有触发逻辑都不变，只有在读的时候多个盒子一起读，在转换的时候多个盒子一起转换
     void on_plotWindow_triggered();
 
     void on_nextPageBtn_clicked();
@@ -98,6 +103,14 @@ private slots:
     void on_openPrj_clicked();
 
     void on_closePrj_clicked();
+
+    void on_newPrj_clicked();
+
+    void on_editPrj_clicked();
+
+    void on_deletePrj_clicked();
+
+    void on_detailPrj_clicked();
 
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);

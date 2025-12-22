@@ -143,7 +143,7 @@ void databaseWorker::handleEditUserRequest(int row, QString preName, QString nam
             if(ret)
             {
                 //tableview刷新显示
-                showEditUser(row,name,password,permission);
+                emit showEditUser(row,name,password,permission);
             }
             else {
                 msgBox::show("警告","用户修改失败",2);
@@ -274,4 +274,99 @@ void databaseWorker::handleQueryProjectById(int id)
             }
         }
     }
+}
+
+void databaseWorker::handleNewProjectRequest(projectDataModel &projectData)
+{
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("insert into project (name,discript,sampleinterval,wallthicknesstype,"
+                  "datapath,creator) values('%1','%2',%3,'%4',(?),%5)").arg(projectData.name)
+            .arg(projectData.discript).arg(projectData.sampleinterval)
+            .arg(projectData.wallthicknesstype).arg(projectData.creator);
+    //使用占位符,Qt自动处理转义
+    query.prepare(sql);
+    query.addBindValue(projectData.datapath);
+    ret = query.exec();
+    if(ret)
+    {
+        //tableview添加显示
+        //查询已添加的结果
+        sql = QString("select name,discript,sampleinterval,wallthicknesstype,createtime,"
+                      "creator,id from project where name='%1' order by createtime desc")
+                .arg(projectData.name);
+        ret = query.exec(sql);
+        if(ret)
+        {
+            int nField = query.record().count();
+            if(query.next())
+            {
+                if(7 == nField)
+                {
+                    projectDataModel oneprjDM;
+                    oneprjDM.name = query.value(0).toString();
+                    oneprjDM.discript =query.value(1).toString();
+                    oneprjDM.sampleinterval = query.value(2).toDouble();
+                    oneprjDM.wallthicknesstype = query.value(3).toString();
+                    oneprjDM.createtime = query.value(4).toString();
+                    oneprjDM.creatorName = projectData.creatorName;
+                    oneprjDM.id = query.value(6).toInt();
+                    emit showAddNewProject(oneprjDM);
+                }
+            }
+        }
+    }
+}
+
+void databaseWorker::handleEditProjectRequest(int row, projectDataModel &projectData)
+{
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("update project set name='%1',discript='%2',sampleinterval=%3,"
+                  "wallthicknesstype='%4',datapath='%5' where id=%6").arg(projectData.name)
+            .arg(projectData.discript).arg(projectData.sampleinterval).arg(projectData.wallthicknesstype)
+            .arg(projectData.datapath).arg(projectData.id);
+    //使用占位符,Qt自动处理转义
+    query.prepare(sql);
+    query.addBindValue(projectData.datapath);
+    ret = query.exec();
+    if(ret)
+    {
+        //emit 更新列表显示
+        emit showEditProject(row,projectData);
+    }
+    else {
+        msgBox::show("警告","项目修改失败",2);
+    }
+}
+
+void databaseWorker::handleDeleteProjectRequest(int row, int projectId)
+{
+
 }
