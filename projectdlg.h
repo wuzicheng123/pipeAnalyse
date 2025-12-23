@@ -20,6 +20,7 @@ public:
     void setCurrentUser(userDataModel userData);
     void trans2editDlg(int projectId, QString prjName, QString prjDiscribe, QString thicknessType,
                        double sampleinterval, QString datapath, int row);
+    void trans2detailDlg(projectDataModel& oneDatamodel);
 
 signals:
     void newProjectRequest(projectDataModel& projectData);

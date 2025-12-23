@@ -49,6 +49,8 @@ public:
     loginDlg *m_loginDlg;//登录界面
     QStandardItemModel *userTableModel;
     QStandardItemModel *prjTableModel;
+    //优化滚轮和拖动手势显示效果，在绘图中不触发(只针对滚轮和拖动，和上一页下一页、未来跳转功能无关)
+    bool m_plotting;//false未进行中，true绘制中
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
@@ -60,7 +62,8 @@ signals:
     void queryAllUsers();
     void deleteUserRequest(int row,QString name);
     void queryAllProjects();
-    void queryProjectById(int id);
+    //type==1打开工程按钮中逻辑;2工程详细按钮逻辑
+    void queryProjectById(int id,int type);
     void deleteProjectRequest(int row,int projectId);
 
 private slots:
@@ -75,6 +78,8 @@ private slots:
     void handleQryProjectByIdResult(projectDataModel& onePrj);
     void handleShowAddNewProject(projectDataModel& onePrj);
     void handleShowEditProject(int row,projectDataModel& onePrj);
+    void handleShowDeleteProject(int row);
+    void handleShowDetailProject(projectDataModel& onePrj);
     //原有触发逻辑都不变，只有在读的时候多个盒子一起读，在转换的时候多个盒子一起转换
     void on_plotWindow_triggered();
 

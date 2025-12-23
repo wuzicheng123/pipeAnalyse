@@ -89,6 +89,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->closePrj->setEnabled(false);
 
     m_dbWorker = nullptr;
+    m_plotting = false;
 }
 
 MainWindow::~MainWindow()
@@ -212,7 +213,11 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
         dataContainer->clear();
         dataContainer->set(QcpData2D[i],true);
     }
-    plotBoard->replot();
+    //优化显示效果，在所有数据填充到指针后一次刷新绘制，可显著提升速度
+    if(boxNum == boxSize-1)
+    {
+        plotBoard->replot();
+    }
 }
 
 void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard,int boxNum,int boxSize)
@@ -466,6 +471,8 @@ void MainWindow::initialDatabase()
         connect(m_dbWorker,&databaseWorker::showAddNewProject,this,&MainWindow::handleShowAddNewProject);
         connect(m_dbWorker,&databaseWorker::showEditProject,this,&MainWindow::handleShowEditProject);
         connect(this,&MainWindow::deleteProjectRequest,m_dbWorker,&databaseWorker::handleDeleteProjectRequest);
+        connect(m_dbWorker,&databaseWorker::showDeleteProject,this,&MainWindow::handleShowDeleteProject);
+        connect(m_dbWorker,&databaseWorker::showDetailProject,this,&MainWindow::handleShowDetailProject);
         thread->start();
     }
 }
@@ -517,6 +524,7 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
             }
         }
     }
+    m_plotting = false;
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
     return 0;
@@ -743,44 +751,68 @@ void MainWindow::handleShowEditProject(int row, projectDataModel &onePrj)
     prjTableModel->item(row,3)->setText(QString::number(onePrj.sampleinterval));
 }
 
+void MainWindow::handleShowDeleteProject(int row)
+{
+    prjTableModel->removeRow(row);
+}
+
+void MainWindow::handleShowDetailProject(projectDataModel &onePrj)
+{
+    projectDlg* prjDetailDlg = new projectDlg(this);
+    prjDetailDlg->setAttribute(Qt::WA_DeleteOnClose);
+    prjDetailDlg->trans2detailDlg(onePrj);
+    prjDetailDlg->exec();
+}
+
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
 {
-   CwindowDisp->startPos = static_cast<qint64>(xLower/CprjConfig->dInterval);
-   CwindowDisp->offset = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
-   CwindowDisp->yLower = yLower;
-   CwindowDisp->yUpper = yUpper;
+    //优化滚轮和拖动手势显示效果，在绘图中不触发
+    if(!m_plotting)
+    {
+        m_plotting = true;
+    }
+    else {
+        return;
+    }
 
-   qint64 startPosInFile = 0;
-   qint64 offsetInfile = 0;
+    CwindowDisp->startPos = static_cast<qint64>(xLower/CprjConfig->dInterval);
+    CwindowDisp->offset = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
+    CwindowDisp->yLower = yLower;
+    CwindowDisp->yUpper = yUpper;
 
-   if(xLower <= 0)
-   {
-       startPosInFile = 0;
-   }
-   else {
-       startPosInFile = static_cast<qint64>(xLower/CprjConfig->dInterval);
-   }
+    qint64 startPosInFile = 0;
+    qint64 offsetInfile = 0;
 
-   if(xLower < 0 && xUpper > 0)
-   {
-       offsetInfile = static_cast<qint64>(xUpper/CprjConfig->dInterval);
-   }
-   else if(xLower >0 && xUpper>0)
-   {
-       offsetInfile = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
-   }
-   else {
-       offsetInfile = 0;
-   }
+    if(xLower <= 0)
+    {
+        startPosInFile = 0;
+    }
+    else {
+        startPosInFile = static_cast<qint64>(xLower/CprjConfig->dInterval);
+    }
 
-   //超出Int范围不处理
-   qint64 iSum = startPosInFile + offsetInfile;
-   if(iSum>=0)
-   {
-       QString qsfilePath = "";
-       emit modelDataRequest(qsfilePath,startPosInFile,offsetInfile);
-       //未来多窗口显示触发改动在此处
-   }
+    if(xLower < 0 && xUpper > 0)
+    {
+        offsetInfile = static_cast<qint64>(xUpper/CprjConfig->dInterval);
+    }
+    else if(xLower >0 && xUpper>0)
+    {
+        offsetInfile = static_cast<qint64>((xUpper-xLower)/CprjConfig->dInterval);
+    }
+    else {
+        offsetInfile = 0;
+    }
+
+    //超出Int范围不处理
+    qint64 iSum = startPosInFile + offsetInfile;
+    if(iSum>=0)
+    {
+        QString qsfilePath = "";
+        emit modelDataRequest(qsfilePath,startPosInFile,offsetInfile);
+    }
+    else {
+        m_plotting = false;
+    }
 }
 
 void MainWindow::on_plotWindow_triggered()
@@ -976,9 +1008,16 @@ void MainWindow::on_deleteUser_clicked()
         msgBox::show("警告","禁止删除admin账户",2);
         return;
     }
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this,"确认删除",QString("确定要删除用户'%1'吗").arg(username),
-                                  QMessageBox::Yes|QMessageBox::No);
+//    QMessageBox::StandardButton reply;
+//    reply = QMessageBox::question(this,"确认删除",QString("确定要删除用户'%1'吗").arg(username),
+//                                  QMessageBox::Yes|QMessageBox::No);
+    QMessageBox qmsgBox(this);
+    qmsgBox.setWindowTitle("确认删除");
+    qmsgBox.setText(QString("确定要删除用户'%1'吗").arg(username));
+    qmsgBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
+    qmsgBox.setButtonText(QMessageBox::Yes,"是");
+    qmsgBox.setButtonText(QMessageBox::No,"否");
+    int reply = qmsgBox.exec();
     if(QMessageBox::Yes == reply)
     {
         emit deleteUserRequest(row,username);
@@ -1000,7 +1039,7 @@ void MainWindow::on_openPrj_clicked()
     int row = selectedIndexes.first().row();
     QStandardItem* prjnameItem = prjTableModel->item(row,0);
     int prjId = prjnameItem->data(Qt::UserRole+1).toInt();
-    emit queryProjectById(prjId);
+    emit queryProjectById(prjId,1);
 }
 
 void MainWindow::on_closePrj_clicked()
@@ -1081,9 +1120,17 @@ void MainWindow::on_deletePrj_clicked()
     int row = selectedIndexes.first().row();
     int projectId = prjTableModel->item(row,0)->data(Qt::UserRole+1).toInt();
     QString projectName = prjTableModel->item(row,0)->text();
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this,"确认删除",QString("确定要删除项目'%1'吗").arg(projectName),
-                                  QMessageBox::Yes|QMessageBox::No);
+//    QMessageBox::StandardButton reply;
+//    reply = QMessageBox::question(this,"确认删除",QString("确定要删除项目'%1'吗").arg(projectName),
+//                                  QMessageBox::Yes|QMessageBox::No);
+    //将对话框中的yes|no改为中文
+    QMessageBox qmsgBox(this);
+    qmsgBox.setWindowTitle("确认删除");
+    qmsgBox.setText(QString("确定要删除项目'%1'吗").arg(projectName));
+    qmsgBox.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
+    qmsgBox.setButtonText(QMessageBox::Yes,"是");
+    qmsgBox.setButtonText(QMessageBox::No,"否");
+    int reply = qmsgBox.exec();
     if(QMessageBox::Yes == reply)
     {
         emit deleteProjectRequest(row,projectId);
@@ -1092,5 +1139,12 @@ void MainWindow::on_deletePrj_clicked()
 
 void MainWindow::on_detailPrj_clicked()
 {
-
+    QModelIndexList selectedIndexes = ui->projectTableView->selectionModel()->selectedRows();
+    if(selectedIndexes.isEmpty())
+    {
+        return;
+    }
+    int row = selectedIndexes.first().row();
+    int projectId = prjTableModel->item(row,0)->data(Qt::UserRole+1).toInt();
+    emit queryProjectById(projectId,2);
 }

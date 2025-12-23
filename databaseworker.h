@@ -22,6 +22,8 @@ signals:
     void qryProjectByIdResult(projectDataModel& onePrj);
     void showAddNewProject(projectDataModel& onePrj);
     void showEditProject(int row,projectDataModel& onePrj);
+    void showDeleteProject(int row);
+    void showDetailProject(projectDataModel& onePrj);
 
 public slots:
     void handleLoginRequest(QString name,QString password);
@@ -30,7 +32,7 @@ public slots:
     void handleEditUserRequest(int row,QString preName,QString name,QString password,QString permission);
     void handleDeleteUserRequest(int row,QString name);
     void handleQueryAllProjects();
-    void handleQueryProjectById(int id);
+    void handleQueryProjectById(int id,int type);
     void handleNewProjectRequest(projectDataModel& projectData);
     void handleEditProjectRequest(int row,projectDataModel& projectData);
     void handleDeleteProjectRequest(int row,int projectId);

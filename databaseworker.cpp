@@ -237,7 +237,7 @@ void databaseWorker::handleQueryAllProjects()
     }
 }
 
-void databaseWorker::handleQueryProjectById(int id)
+void databaseWorker::handleQueryProjectById(int id,int type)
 {
     DatabaseConnection conn;
     if(!conn.isValid())
@@ -254,23 +254,49 @@ void databaseWorker::handleQueryProjectById(int id)
         qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
         return;
     }
-    sql = QString("select name,sampleinterval,datapath from project where id=%1").arg(id);
-    ret = query.exec(sql);
-    if(ret)
+    if(1 == type)
     {
-        int nField = query.record().count();
-        if(query.next())
+        sql = QString("select name,sampleinterval,datapath from project where id=%1").arg(id);
+        ret = query.exec(sql);
+        if(ret)
         {
-
-            if(3 == nField)
+            int nField = query.record().count();
+            if(query.next())
             {
-                projectDataModel oneProject;
-                oneProject.name = query.value(0).toString();
-                oneProject.sampleinterval = query.value(1).toDouble();
-                oneProject.datapath = query.value(2).toString();
-                oneProject.id = id;
-                //emit
-                emit qryProjectByIdResult(oneProject);
+
+                if(3 == nField)
+                {
+                    projectDataModel oneProject;
+                    oneProject.name = query.value(0).toString();
+                    oneProject.sampleinterval = query.value(1).toDouble();
+                    oneProject.datapath = query.value(2).toString();
+                    oneProject.id = id;
+                    //emit
+                    emit qryProjectByIdResult(oneProject);
+                }
+            }
+        }
+    }
+    else if(2 == type)
+    {
+        sql = QString("select name,discript,wallthicknesstype,sampleinterval,datapath from project where id=%1").arg(id);
+        ret = query.exec(sql);
+        if(ret)
+        {
+            int nField = query.record().count();
+            if(query.next())
+            {
+                if(5 == nField)
+                {
+                    projectDataModel oneProject;
+                    oneProject.name = query.value(0).toString();
+                    oneProject.discript = query.value(1).toString();
+                    oneProject.wallthicknesstype = query.value(2).toString();
+                    oneProject.sampleinterval = query.value(3).toDouble();
+                    oneProject.datapath = query.value(4).toString();
+                    //emit
+                    emit showDetailProject(oneProject);
+                }
             }
         }
     }
@@ -368,5 +394,28 @@ void databaseWorker::handleEditProjectRequest(int row, projectDataModel &project
 
 void databaseWorker::handleDeleteProjectRequest(int row, int projectId)
 {
-
+    DatabaseConnection conn;
+    if(!conn.isValid())
+    {
+        qDebug()<<"数据库连接池获取失败";
+        return;
+    }
+    QSqlDatabase db = conn.database();
+    QSqlQuery query(db);
+    QString sql = "use pipeanalyse";
+    bool ret = query.exec(sql);
+    if(!ret)
+    {
+        qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
+        return;
+    }
+    sql = QString("delete from project where id=%1").arg(projectId);
+    ret = query.exec(sql);
+    if(ret)
+    {
+        emit showDeleteProject(row);
+    }
+    else {
+        msgBox::show("警告","项目删除失败",2);
+    }
 }

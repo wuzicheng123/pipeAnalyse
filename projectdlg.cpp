@@ -51,6 +51,24 @@ void projectDlg::trans2editDlg(int projectId, QString prjName, QString prjDiscri
     ui->datapathEdit->setText(datapath);
 }
 
+void projectDlg::trans2detailDlg(projectDataModel &oneDatamodel)
+{
+    this->setWindowTitle("项目详情");
+    ui->prjNameEdit->setText(oneDatamodel.name);
+    ui->discribeEdit->setText(oneDatamodel.discript);
+    ui->thicknessEdit->setText(oneDatamodel.wallthicknesstype);
+    ui->intervalEdit->setText(QString::number(oneDatamodel.sampleinterval));
+    ui->datapathEdit->setText(oneDatamodel.datapath);
+    ui->prjNameEdit->setReadOnly(true);
+    ui->discribeEdit->setReadOnly(true);
+    ui->thicknessEdit->setReadOnly(true);
+    ui->intervalEdit->setReadOnly(true);
+    ui->datapathEdit->setReadOnly(true);
+    ui->datapathButton->setEnabled(false);
+    ui->okButton->setEnabled(false);
+    ui->cancelButton->setEnabled(false);
+}
+
 void projectDlg::handletextChanged()
 {
     bool nameeditValid = (ui->prjNameEdit->text().size() != 0);
