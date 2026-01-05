@@ -63,6 +63,10 @@ FORMS += \
     newuserdlg.ui \
     projectdlg.ui
 
+OPENCV_PATH = $$PWD\opencv
+INCLUDEPATH += $$OPENCV_PATH\include
+LIBS += $$OPENCV_PATH\bin\libopencv_*.dll
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

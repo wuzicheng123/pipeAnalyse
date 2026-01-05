@@ -10,6 +10,7 @@
 #include "newuserdlg.h"
 #include "projectdlg.h"
 #include <QDir>
+#include "opencv2/opencv.hpp"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -131,8 +132,13 @@ void MainWindow::hideForm()
     ui->stackedWidget->hide();
 }
 
-void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd,MyCustomPlot *& plotBoard,int axis,int boxNum,int boxSize)
+void MainWindow::plotLineChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd,MyCustomPlot *& plotBoard,int axis,int boxNum,int boxSize)
 {
+    if(0 == boxNum)
+    {
+        //清除之前内容
+        plotBoard->clearItems();
+    }
     int RowSize = QcpData2D.size();
     //查找36个通道的最大最小值
     //并进行归一化到-50-50转换
@@ -220,7 +226,7 @@ void MainWindow::plotDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint6
     }
 }
 
-void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard,int boxNum,int boxSize)
+void MainWindow::plotLineChartbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard,int boxNum,int boxSize)
 {
     switch (sensorType)   //一个窗口
     {
@@ -228,7 +234,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(1) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize);
+                plotLineChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize);
             }
             break;
         }
@@ -236,7 +242,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(2) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize);
+                plotLineChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize);
             }
             break;
         }
@@ -244,7 +250,7 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(3) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize);
+                plotLineChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize);
             }
             break;
         }
@@ -252,10 +258,167 @@ void MainWindow::plotbySensorType(int sensorType, QMap<int, QVector<QVector<QCPG
             if(qmCPData.find(4) != qmCPData.end())
             {
                 QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
-                plotDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize);
+                plotLineChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize);
             }
             break;
         }
+    }
+}
+
+void MainWindow::plotGrayChartbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard, int boxNum, int boxSize, QVector<QVector<double> > &doubleArray2D)
+{
+    switch (sensorType) {
+    case 1:{    //X轴
+        if(qmCPData.find(1) != qmCPData.end())
+        {
+            QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
+            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize,doubleArray2D[0]);
+        }
+        break;
+    }
+    case 2:{    //Y轴
+        if(qmCPData.find(2) != qmCPData.end())
+        {
+            QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
+            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize,doubleArray2D[1]);
+        }
+        break;
+    }
+    case 3:{    //Z轴
+        if(qmCPData.find(3) != qmCPData.end())
+        {
+            QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
+            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize,doubleArray2D[2]);
+        }
+        break;
+    }
+    case 4:{    //VORTEX
+        if(qmCPData.find(4) != qmCPData.end())
+        {
+            QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
+            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize,doubleArray2D[3]);
+        }
+        break;
+    }
+    }
+}
+
+void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize, QVector<double>&doubleArray)
+{
+    //将QcpData2D转换为一维数组,并按axis分类修改数值，并归一化映射到0-255范围
+    //未避免使用prepend,带来的额外开销，提前预设数组空间，按坐标填入数据
+    int RowSize = QcpData2D.size();
+    int ColumnSizeOut = static_cast<int>(windowEnd - windowStart);
+    //窗口实际显示范围（乘以采样间隔）
+    double xRealLower = windowStart*CprjConfig->dInterval;
+    double xRealHigher = windowEnd*CprjConfig->dInterval;
+    for(int i=0;i<RowSize;i++)
+    {
+        int ColumnSize = QcpData2D[i].size();
+        //当前界面的矩阵元素
+        int elementSizeInBox = RowSize*ColumnSizeOut;
+        int doubleArraySize = elementSizeInBox*boxSize;
+        int hallXYdivisor = static_cast<int>(2*plotProcess::getInstance()->hallUpperLimitXY);
+        int hallZdivisor = static_cast<int>(2*plotProcess::getInstance()->hallUpperLimitZ);
+        if(doubleArray.isEmpty())
+        {
+            doubleArray.resize(doubleArraySize);
+            doubleArray.fill(1.0);
+            if(doubleArray.size() != doubleArraySize)
+            {
+                qDebug()<<"分配异常，实际大小为:"<<doubleArray.size();
+            }
+            else {
+                qDebug()<<"分配容量正确";
+            }
+        }
+        for(int j=0;j<ColumnSize;j++)
+        {
+            double& dy = QcpData2D[i][j].value;
+            if(1 == axis || 2 == axis)
+            {
+                if(dy > plotProcess::getInstance()->hallUpperLimitXY)
+                {
+                    dy = plotProcess::getInstance()->hallUpperLimitXY;
+                }
+                else if(dy < plotProcess::getInstance()->hallLowerLimitXY)
+                {
+                    dy = plotProcess::getInstance()->hallLowerLimitXY;
+                }
+                //归一化，转换到0-1范围；
+                //上限为白色：1<==>255
+                dy = (dy+plotProcess::getInstance()->hallUpperLimitXY)/hallXYdivisor;
+            }
+            else if(3 == axis)
+            {
+                if(dy > plotProcess::getInstance()->hallUpperLimitZ)
+                {
+                    dy = plotProcess::getInstance()->hallUpperLimitZ;
+                }
+                else if(dy < plotProcess::getInstance()->hallLowerLimitZ)
+                {
+                    dy = plotProcess::getInstance()->hallLowerLimitZ;
+                }
+                //归一化，转换到0-1范围；
+                dy = (dy+plotProcess::getInstance()->hallUpperLimitZ)/hallZdivisor;
+            }
+            else if(4 == axis)
+            {
+                //归一化，转换到0-1范围；
+                dy = dy/65535;
+            }
+            //将二维映射到一维数组
+            int index = elementSizeInBox*(boxSize-1-boxNum)+ColumnSizeOut*(RowSize-1-i)+j;
+            doubleArray[index] = dy;
+        }
+    }
+    //设置qcustomplot坐标轴
+    plotBoard->xAxis->setLabel("距离");
+    plotBoard->yAxis->setLabel("通道");
+    plotBoard->xAxis->setRange(xRealLower,xRealHigher);
+    double yRangeMax = 36*boxSize+20;
+    double yRangeMin = -20;
+    plotBoard->yAxis->setRange(yRangeMin,yRangeMax);
+    if(0 == CwindowDisp->yLower && 0 == CwindowDisp->yUpper)
+    {
+        if(yRangeMax > 36+20)
+        {
+            CwindowDisp->yUpper = 36*boxSize+20;
+            CwindowDisp->yLower = -20;
+        }
+        else {
+            CwindowDisp->yUpper = 38;
+            CwindowDisp->yLower = -4;
+        }
+        plotBoard->yAxis->setRange(CwindowDisp->yLower,CwindowDisp->yUpper);
+    }
+    else {
+        plotBoard->yAxis->setRange(CwindowDisp->yLower,CwindowDisp->yUpper);
+    }
+//    最后一个盒子时，转换为cv::Mat，并放入plotBoard中
+    if(boxNum == boxSize-1)
+    {
+        //清除之前内容
+        plotBoard->replot();
+        plotBoard->clearPlottables();
+        plotBoard->clearItems();
+
+        cv::Mat doubleMat(RowSize*boxSize,ColumnSizeOut,CV_64FC1,const_cast<double*>(doubleArray.data()));
+        cv::Mat grayMat;
+        doubleMat.convertTo(grayMat,CV_8UC1,255.0);
+        if(grayMat.empty())
+            return;
+        //将OpenCV Mat转换为QImage
+        QImage image(grayMat.data,grayMat.cols,grayMat.rows,static_cast<int>(grayMat.step),QImage::Format_Grayscale8);
+        //创建QPixmap
+        QPixmap pixmap = QPixmap::fromImage(image);
+        QCPItemPixmap *pixmapItem = new QCPItemPixmap(plotBoard);
+        pixmapItem->setPixmap(pixmap);
+        //设置位置大小
+        pixmapItem->topLeft->setType(QCPItemPosition::ptAxisRectRatio);
+        pixmapItem->bottomRight->setType(QCPItemPosition::ptAxisRectRatio);
+        pixmapItem->topLeft->setCoords(0,1);
+        pixmapItem->bottomRight->setCoords(1,0);
     }
 }
 
@@ -477,6 +640,75 @@ void MainWindow::initialDatabase()
     }
 }
 
+void MainWindow::clearPlotboard(MyCustomPlot *&plotBoard)
+{
+    if(nullptr != plotBoard)
+    {
+        plotBoard->clearPlottables();    // 清除所有图形
+        plotBoard->clearItems();         // 清除所有图项
+        plotBoard->xAxis->setLabel("");  // 清除X轴标签
+        plotBoard->yAxis->setLabel("");  // 清除Y轴标签
+        plotBoard->replot();             // 重绘
+        setCPtittle(plotBoard,"");
+    }
+}
+
+void MainWindow::testOpenCV()
+{
+    qDebug() << "=== OpenCV 基本环境测试 ===";
+
+    // 1. 检查版本
+    qDebug() << "OpenCV版本: " << CV_VERSION ;
+    qDebug() << "主版本: " << CV_MAJOR_VERSION;
+    qDebug() << "次版本: " << CV_MINOR_VERSION;
+
+    // 2. 检查编译信息
+    qDebug() << "\n编译信息:";
+    qDebug() << QString::fromStdString(cv::getBuildInformation());
+
+    // 3. 创建测试图像
+    qDebug() << "\n创建测试图像...";
+    cv::Mat testImage(300, 400, CV_8UC3, cv::Scalar(100, 150, 200));
+
+    if (testImage.empty()) {
+        std::cerr << "错误: 无法创建图像";
+        return;
+    }
+
+    qDebug() << "图像创建成功!";
+    qDebug() << "尺寸: " << testImage.cols << "x" << testImage.rows;
+    qDebug() << "通道数: " << testImage.channels();
+    qDebug() << "深度: " << testImage.depth();
+
+    // 4. 保存测试图像
+    cv::imwrite("test_output.png", testImage);
+    qDebug() << "测试图像已保存为 test_output.png";
+
+    // 5. 加载图像测试
+    qDebug() << "\n加载图像测试...";
+    cv::Mat loadedImage = cv::imread("test_output.png");
+
+    if (loadedImage.empty()) {
+        std::cerr << "错误: 无法加载图像";
+        return;
+    }
+
+    qDebug() << "图像加载成功!";
+    qDebug() << "加载的尺寸: " << loadedImage.cols << "x" << loadedImage.rows;
+
+    // 6. 显示图像（如果有GUI支持）
+    #ifdef HAVE_OPENCV_HIGHGUI
+    qDebug() << "\n显示图像 (5秒后关闭)...";
+    cv::imshow("OpenCV测试图像", testImage);
+    cv::waitKey(5000);
+    cv::destroyAllWindows();
+    #else
+    qDebug() << "\nGUI模块不可用，跳过显示";
+    #endif
+
+    qDebug() << "\n=== 测试通过！ ===";
+}
+
 int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec)
 {
     dataService::getInstance()->m_dataRwLock.lockForRead();
@@ -503,6 +735,9 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
         vecMyCP.append(QcpText_2);
         vecMyCP.append(QcpText_3);
         vecMyCP.append(QcpText_4);
+        //灰度图所用参数
+        //0-代表X，1-Y。。。3代表Vortex（存储灰度图像处理数据）
+        QVector<QVector<double>>doubleArray(4);
         for(int k=0;k<boxSize;k++)
         {
             QMap<int, QVector<QVector<QCPGraphData>>>&qmCPData = qmCPDatavec[k];
@@ -511,11 +746,11 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
             {
                 if(1 == CwindowDisp->windPlotType[i]) //曲线图
                 {
-                    plotbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize);
+                    plotLineChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize);
                 }
                 else if(2 == CwindowDisp->windPlotType[i]) //灰度图
                 {
-
+                    plotGrayChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize,doubleArray);
                 }
                 else if(3 == CwindowDisp->windPlotType[i]) //彩色图
                 {
@@ -1045,27 +1280,16 @@ void MainWindow::on_openPrj_clicked()
 void MainWindow::on_closePrj_clicked()
 {
     //画板恢复空白
-    setMutiWindow(1);
-    ui->QcpText_1->clearPlottables();    // 清除所有图形
-    ui->QcpText_1->clearItems();         // 清除所有图项
-    ui->QcpText_1->xAxis->setLabel("");  // 清除X轴标签
-    ui->QcpText_1->yAxis->setLabel("");  // 清除Y轴标签
-    ui->QcpText_1->replot();             // 重绘
-    setCPtittle(ui->QcpText_1,"");
+    clearPlotboard(ui->QcpText_1);
+    clearPlotboard(QcpText_2);
+    clearPlotboard(QcpText_3);
+    clearPlotboard(QcpText_4);
     CwindowDisp->bFirstPlot = true;
     CwindowDisp->startPos = 0;
     CwindowDisp->offset = 2000;
     CwindowDisp->yLower = 0;
     CwindowDisp->yUpper = 0;
     CwindowDisp->pageOffset = 1500;
-    for(int i=0;i<4;i++)
-    {
-        CwindowDisp->windSensorType[i]=0;
-        CwindowDisp->windPlotType[i]=0;
-    }
-    CwindowDisp->windNum = 1;
-    CwindowDisp->windSensorType[0] = 1;
-    CwindowDisp->windPlotType[0] = 1;
     CprjConfig->dInterval = 0;
     CprjConfig->dataDirPath = "";
     QVector<QString>().swap(CprjConfig->curFileNamevec);
@@ -1075,7 +1299,6 @@ void MainWindow::on_closePrj_clicked()
 
     ui->openPrj->setEnabled(true);
     ui->closePrj->setEnabled(false);
-    emit initalWinNum();
 }
 
 void MainWindow::on_newPrj_clicked()

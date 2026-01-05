@@ -23,22 +23,39 @@ public:
     ~MainWindow();
 
     void hideForm();
-    //前台绘制波形曲线图
+    //前台绘制波形曲线图（曲线图绘制子函数）
     //QcpData2D-36通道电磁数据
     //windowStart-图表开始点,windowEnd-图表结束点
     //plotBoard - MyCustomPlot画板
     //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
-    void plotDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize);
-    //handlePlotDataReady中的子函数
+    void plotLineChartDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize);
+    //handlePlotDataReady中的子函数（曲线图绘制函数）
     //sensorType绘图传感器类型，qmCPData绘制数据，plotBoard画板
     //boxNum为阿拉伯数字减一，循环变量
-    void plotbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize);
+    void plotLineChartbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize);
+    //doubleArray的外层数组0-代表X，1-Y。。。3代表Vortex（存储灰度图像处理数据），别的参数同上
+    //灰度图像处理函数
+    //doubleArray2D外层数组大小为4，0-X，1-Y以此类推
+    void plotGrayChartbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize, QVector<QVector<double>>&doubleArray2D);
+    //灰度图绘制子函数
+    //QcpData2D-36通道电磁数据
+    //windowStart-图表开始点,windowEnd-图表结束点
+    //plotBoard - MyCustomPlot画板
+    //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
+    //根据axis值传入对应的doubleArray
+    void plotGrayChartDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis,
+                                 int boxNum, int boxSize, QVector<double> &doubleArray);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
     //设置图表标题
     void setCPtittle(MyCustomPlot*& plotboard, QString strTitle);
     //初始化数据库及数据库后台线程
     void initialDatabase();
+    //清图函数，传入画板参数
+    void clearPlotboard(MyCustomPlot*& plotBoard);
+    //openCV
+    //openCV功能测试函数
+    void testOpenCV();
 
     //窗口控件
     //多窗体窗口控件(窗体1在ui中)  //QcpText//窗体1

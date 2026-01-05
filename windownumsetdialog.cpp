@@ -27,6 +27,10 @@ void windowNumSetDialog::handleInitalWinNum()
     ui->sensorType_2->setCurrentIndex(1);
     ui->sensorType_3->setCurrentIndex(2);
     ui->sensorType_4->setCurrentIndex(3);
+    ui->plotType_1->setCurrentIndex(0);
+    ui->plotType_2->setCurrentIndex(0);
+    ui->plotType_3->setCurrentIndex(0);
+    ui->plotType_4->setCurrentIndex(0);
     ui->windowNumSet->setCurrentIndex(0);
 }
 
