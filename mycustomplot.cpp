@@ -7,8 +7,8 @@ MyCustomPlot::MyCustomPlot(QWidget *parent):
     m_timer = nullptr;
     m_dragTimer = nullptr;
     m_dragging = false;
-    m_initial = false;
     m_leftPress = false;
+    m_textLayer = nullptr;
     QVector<TracerInfo>().swap(m_tracers);
     m_currentIndex = 0;
 }
@@ -26,7 +26,6 @@ MyCustomPlot::~MyCustomPlot()
         m_dragTimer = nullptr;
     }
     m_dragging = false;
-    m_initial = false;
     m_leftPress = false;
 }
 
@@ -47,6 +46,21 @@ void MyCustomPlot::mouseReleaseEvent(QMouseEvent *event)
     }
     else if(Qt::LeftButton == event->button())
     {
+        //通过标题判断绘图类型，当类型为曲线图时继续，否则return（只有曲线图提供标牌）
+        int itemCnt = this->itemCount();
+        int retFlag = false;
+        for (int var = 0; var < itemCnt; ++var) {
+            QCPAbstractItem* item = this->item(var);
+            if(dynamic_cast<QCPItemPixmap*>(item))
+            {
+                retFlag = true;
+                break;
+            }
+        }
+        if(retFlag)
+        {
+            return;
+        }
         if(m_leftPress)
         {
             int iSize = m_tracers.size();
@@ -158,64 +172,75 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
     }
     else if(Qt::LeftButton == event->button())
     {
-        //初始化创建追踪器或追踪器数量少于图像数量
-        int graphSize = this->graphCount();
-        if(!m_initial || graphSize > m_tracers.size())
-        {
-            m_initial = true;
-            for(int i=0;i<graphSize;i++)
+        //通过标题判断绘图类型，当类型为曲线图时继续，否则return（只有曲线图提供标牌）
+        int itemCnt = this->itemCount();
+        int retFlag = false;
+        for (int var = 0; var < itemCnt; ++var) {
+            QCPAbstractItem* item = this->item(var);
+            if(dynamic_cast<QCPItemPixmap*>(item))
             {
-                if(i<m_tracers.size())
-                {
-                    TracerInfo& oneTracer = m_tracers[i];
-                    QCPGraph* graph = this->graph(i);
-                    if(graph && !graph->data()->isEmpty())
-                    {
-                        oneTracer.tracer->setGraph(graph);
-                        oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
-                    }
-                }
-                else {
-                    TracerInfo oneTracer;
-                    QCPGraph* graph = this->graph(i);
-                    if(graph && !graph->data()->isEmpty())
-                    {
-                        oneTracer.isActive = false;
-                        oneTracer.tracer = new QCPItemTracer(this);
-                        oneTracer.tracer->setGraph(graph);
-                        oneTracer.tracer->setInterpolating(false);
-                        oneTracer.tracer->setStyle(QCPItemTracer::tsCrosshair);
-                        oneTracer.tracer->setSize(6);
-                        oneTracer.tracer->setVisible(oneTracer.isActive);
-
-                        oneTracer.label = new QCPItemText(this);
-                        oneTracer.label->setPositionAlignment(Qt::AlignLeft|Qt::AlignBottom);
-                        oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
-                        oneTracer.label->position->setCoords(10,-5);
-                        oneTracer.label->setText(QString("Point %1").arg(i));
-                        oneTracer.label->setTextAlignment(Qt::AlignLeft);
-                        oneTracer.label->setFont(QFont(font().family(), 9));
-                        oneTracer.label->setPen(QPen(Qt::black));
-                        oneTracer.label->setBrush(QBrush(QColor(255,255,255,200)));
-                        oneTracer.label->setPadding(QMargins(3, 1, 3, 1));
-                        oneTracer.label->setVisible(oneTracer.isActive);
-                    }
-                    m_tracers.append(oneTracer);
-                }
+                retFlag = true;
+                break;
             }
         }
-        //已初始化后更新追踪器（翻页或拖拽时）
-        else if(m_initial && graphSize <= m_tracers.size())
+        if(retFlag)
         {
-            for(int i=0;i<graphSize;i++)
+            return;
+        }
+        //初始化创建追踪器并对已有追踪器更新
+        int graphSize = this->graphCount();
+        for(int i=0;i<graphSize;i++)
+        {
+            if(i<m_tracers.size())
             {
                 TracerInfo& oneTracer = m_tracers[i];
                 QCPGraph* graph = this->graph(i);
                 if(graph && !graph->data()->isEmpty())
                 {
                     oneTracer.tracer->setGraph(graph);
-                    oneTracer.label->position->setParentAnchor(oneTracer.tracer->position);
+                    safeSetParentAnchor(oneTracer.label->position,oneTracer.tracer->position);
                 }
+            }
+            else {
+                TracerInfo oneTracer;
+                QCPGraph* graph = this->graph(i);
+                if(graph && !graph->data()->isEmpty())
+                {
+                    oneTracer.isActive = false;
+                    oneTracer.tracer = new QCPItemTracer(this);
+                    oneTracer.tracer->setGraph(graph);
+                    oneTracer.tracer->setInterpolating(false);
+                    oneTracer.tracer->setStyle(QCPItemTracer::tsCrosshair);
+                    oneTracer.tracer->setSize(6);
+                    oneTracer.tracer->setVisible(oneTracer.isActive);
+
+                    //创建文本图层显示在最上方
+                    if(nullptr == m_textLayer)
+                    {
+                        bool addRes = this->addLayer("textLayer");
+                        if(addRes)
+                        {
+                            m_textLayer = this->layer("textLayer");
+                            this->moveLayer(m_textLayer,this->layer("main"));
+                        }
+                    }
+                    oneTracer.label = new QCPItemText(this);
+                    oneTracer.label->setPositionAlignment(Qt::AlignLeft|Qt::AlignBottom);
+                    safeSetParentAnchor(oneTracer.label->position,oneTracer.tracer->position);
+                    oneTracer.label->position->setCoords(10,-5);
+                    oneTracer.label->setText(QString("Point %1").arg(i));
+                    oneTracer.label->setTextAlignment(Qt::AlignLeft);
+                    oneTracer.label->setFont(QFont(font().family(), 9));
+                    oneTracer.label->setPen(QPen(Qt::black));
+                    oneTracer.label->setBrush(QBrush(QColor(255,255,255,200)));
+                    oneTracer.label->setPadding(QMargins(3, 1, 3, 1));
+                    if(nullptr != m_textLayer)
+                    {
+                        oneTracer.label->setLayer(m_textLayer);
+                    }
+                    oneTracer.label->setVisible(oneTracer.isActive);
+                }
+                m_tracers.append(oneTracer);
             }
         }
 
@@ -289,6 +314,30 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
 
             this->replot();
         }
+    }
+}
+
+void MyCustomPlot::safeSetParentAnchor(QCPItemPosition *childPos, QCPItemAnchor *parentAnchor)
+{
+    if(!childPos)
+        return;
+    // 如果当前的父锚点已经是parentAnchor，则跳过
+    if(childPos->parentAnchorX() == parentAnchor && childPos->parentAnchorY() == parentAnchor)
+    {
+        return;
+    }
+    // 否则，先尝试清除旧的父锚点关系
+    try {
+        childPos->setParentAnchor(nullptr);
+    } catch (...) {
+        //忽略异常
+    }
+    // 然后设置新的父锚点
+    try {
+        childPos->setParentAnchor(parentAnchor);
+    } catch (const std::exception& e) {
+        //记录错误
+        qDebug()<<"设置父锚点失败："<<e.what();
     }
 }
 

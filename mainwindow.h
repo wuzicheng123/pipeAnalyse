@@ -53,6 +53,8 @@ public:
     void initialDatabase();
     //清图函数，传入画板参数
     void clearPlotboard(MyCustomPlot*& plotBoard);
+    //清图函数子函数，对于item项：只清除QCPItemPixmap，保留QCPItemTracer和QCPItemText，从而避免QCPItemText被删除后依然调用
+    void removePixmapItem(MyCustomPlot*& plotBoard);
     //openCV
     //openCV功能测试函数
     void testOpenCV();

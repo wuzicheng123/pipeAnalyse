@@ -29,6 +29,12 @@ private:
     virtual void mouseMoveEvent(QMouseEvent* event) override;
     virtual void mousePressEvent(QMouseEvent* event) override;
 
+    //避免label设置父锚点报错的子函数
+    void safeSetParentAnchor(QCPItemPosition* childPos,QCPItemAnchor* parentAnchor);
+
+    //标牌显示图层（在默认图层之上）
+    QCPLayer* m_textLayer;
+
     //滚轮缩放逻辑参数
     QTimer* m_timer; //去抖动
 
@@ -38,7 +44,6 @@ private:
     QPoint m_prePoint; //0.5s前上一个点
 
     //鼠标左键显示图像数据
-    bool m_initial;
     bool m_leftPress;
     QVector<TracerInfo>m_tracers;
     int m_currentIndex;//m_tracers数组当前选中下标

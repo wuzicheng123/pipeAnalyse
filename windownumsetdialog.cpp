@@ -42,7 +42,7 @@ void windowNumSetDialog::on_okButton_clicked()
     windPlotType[0] = ui->plotType_1->currentIndex()+1;
     windPlotType[1] = ui->plotType_2->currentIndex()+1;
     windPlotType[2] = ui->plotType_3->currentIndex()+1;
-    windPlotType[3] = ui->plotType_2->currentIndex()+1;
+    windPlotType[3] = ui->plotType_4->currentIndex()+1;
     windSensorType[0] = ui->sensorType_1->currentIndex()+1;
     windSensorType[1] = ui->sensorType_2->currentIndex()+1;
     windSensorType[2] = ui->sensorType_3->currentIndex()+1;

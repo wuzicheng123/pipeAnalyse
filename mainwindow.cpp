@@ -136,8 +136,8 @@ void MainWindow::plotLineChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
 {
     if(0 == boxNum)
     {
-        //清除之前内容
-        plotBoard->clearItems();
+        //若存在灰度图像，清除灰度图像
+        removePixmapItem(plotBoard);
     }
     int RowSize = QcpData2D.size();
     //查找36个通道的最大最小值
@@ -312,6 +312,11 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
     //窗口实际显示范围（乘以采样间隔）
     double xRealLower = windowStart*CprjConfig->dInterval;
     double xRealHigher = windowEnd*CprjConfig->dInterval;
+    int columnOffset = 0;
+    if(windowStart<0 && windowEnd>0)
+    {
+        columnOffset = 0-static_cast<int>(windowStart);
+    }
     for(int i=0;i<RowSize;i++)
     {
         int ColumnSize = QcpData2D[i].size();
@@ -346,8 +351,10 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
                     dy = plotProcess::getInstance()->hallLowerLimitXY;
                 }
                 //归一化，转换到0-1范围；
-                //上限为白色：1<==>255
-                dy = (dy+plotProcess::getInstance()->hallUpperLimitXY)/hallXYdivisor;
+                //白色：1<==>255
+                //黑色：0
+                //取反，黑色显示1更明显
+                dy = 1-(dy+plotProcess::getInstance()->hallUpperLimitXY)/hallXYdivisor;
             }
             else if(3 == axis)
             {
@@ -360,15 +367,15 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
                     dy = plotProcess::getInstance()->hallLowerLimitZ;
                 }
                 //归一化，转换到0-1范围；
-                dy = (dy+plotProcess::getInstance()->hallUpperLimitZ)/hallZdivisor;
+                dy = 1-(dy+plotProcess::getInstance()->hallUpperLimitZ)/hallZdivisor;
             }
             else if(4 == axis)
             {
                 //归一化，转换到0-1范围；
-                dy = dy/65535;
+                dy = 1-dy/65535;
             }
             //将二维映射到一维数组
-            int index = elementSizeInBox*(boxSize-1-boxNum)+ColumnSizeOut*(RowSize-1-i)+j;
+            int index = elementSizeInBox*(boxSize-1-boxNum)+ColumnSizeOut*(RowSize-1-i)+j+columnOffset;
             doubleArray[index] = dy;
         }
     }
@@ -398,27 +405,74 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
 //    最后一个盒子时，转换为cv::Mat，并放入plotBoard中
     if(boxNum == boxSize-1)
     {
-        //清除之前内容
-        plotBoard->replot();
+        //清除曲线图
         plotBoard->clearPlottables();
-        plotBoard->clearItems();
+        //若存在灰度图像，清除灰度图像
+        removePixmapItem(plotBoard);
 
         cv::Mat doubleMat(RowSize*boxSize,ColumnSizeOut,CV_64FC1,const_cast<double*>(doubleArray.data()));
         cv::Mat grayMat;
         doubleMat.convertTo(grayMat,CV_8UC1,255.0);
         if(grayMat.empty())
+        {
+            plotBoard->replot();
             return;
+        }
         //将OpenCV Mat转换为QImage
         QImage image(grayMat.data,grayMat.cols,grayMat.rows,static_cast<int>(grayMat.step),QImage::Format_Grayscale8);
+        double yLowerAPI = plotBoard->yAxis->range().lower;
+        double yUpperAPI = plotBoard->yAxis->range().upper;
+        int imageHeight = RowSize*boxSize;
+        double topleftScaleY = 0.0;
+        double bottomrightScaleY = 1.0;
+        //根据坐标轴纵向裁剪图片
+        QImage displayImage;
+        //yUpperAPI小于0，或yLowerAPI大于imageHeight-----显示白板
+        if(yUpperAPI<=0 || yLowerAPI>=imageHeight)
+        {
+            plotBoard->replot();
+            return;
+        }
+        //计算y轴显示比列坐标；x轴因做了偏移填充，因此无需计算topleftScaleX、bottomrightScaleX，默认为0和1
+        //yUpperAPI大于0小于imageHeight，yLowerAPI下限小于0------显示图像上半部分
+        else if(yUpperAPI>0 && yUpperAPI<=imageHeight && yLowerAPI<0)
+        {
+            displayImage = image.copy(0,static_cast<int>(imageHeight-yUpperAPI),ColumnSizeOut,static_cast<int>(yUpperAPI));
+            topleftScaleY = 0.0;
+            bottomrightScaleY = (yUpperAPI - 0)/(yUpperAPI-yLowerAPI);
+        }
+        //yLowerAPI与yUpperAPI在0到imageHeight之间------显示图像局部区域
+        else if(yLowerAPI>=0 && yLowerAPI<imageHeight && yUpperAPI>0 && yUpperAPI<=imageHeight)
+        {
+            displayImage = image.copy(0,static_cast<int>(imageHeight-yUpperAPI),ColumnSizeOut,static_cast<int>(imageHeight-yLowerAPI));
+            topleftScaleY = 0.0;
+            bottomrightScaleY = 1.0;
+        }
+        //yLowerAPI大于0小于imageHeight，yUpperAPI大于imageHeight-----显示图像下半部分
+        else if(yLowerAPI>=0 && yLowerAPI<imageHeight && yUpperAPI>imageHeight)
+        {
+            displayImage = image.copy(0,0,ColumnSizeOut,static_cast<int>(imageHeight-yLowerAPI));
+            topleftScaleY = (yUpperAPI-imageHeight)/(yUpperAPI-yLowerAPI);
+            bottomrightScaleY = 1.0;
+        }
+        //yLowerAPI小于0，yUpperAPI大于imageHeight-----显示图像全部及超出部分空白显示
+        else if(yLowerAPI<0 && yUpperAPI>imageHeight)
+        {
+            displayImage = image;
+            topleftScaleY = (yUpperAPI-imageHeight)/(yUpperAPI-yLowerAPI);
+            bottomrightScaleY = (yUpperAPI - 0)/(yUpperAPI-yLowerAPI);
+        }
         //创建QPixmap
-        QPixmap pixmap = QPixmap::fromImage(image);
+        QPixmap pixmap = QPixmap::fromImage(displayImage);
         QCPItemPixmap *pixmapItem = new QCPItemPixmap(plotBoard);
         pixmapItem->setPixmap(pixmap);
-        //设置位置大小
+        pixmapItem->setScaled(true,Qt::IgnoreAspectRatio);
+        //设置显示区域位置大小，灰度图固定于坐标轴0-imageHeight之间显示
         pixmapItem->topLeft->setType(QCPItemPosition::ptAxisRectRatio);
         pixmapItem->bottomRight->setType(QCPItemPosition::ptAxisRectRatio);
-        pixmapItem->topLeft->setCoords(0,1);
-        pixmapItem->bottomRight->setCoords(1,0);
+        pixmapItem->topLeft->setCoords(0,topleftScaleY);
+        pixmapItem->bottomRight->setCoords(1,bottomrightScaleY);
+        plotBoard->replot();
     }
 }
 
@@ -562,29 +616,26 @@ void MainWindow::setMutiWindow(int Num)
     vecMyCP.append(QcpText_4);
     for(int i=0;i<Num;i++)
     {
-        if(1 == CwindowDisp->windPlotType[i]) //曲线图
-        {
-            switch (CwindowDisp->windSensorType[i]) {
-                case 1:
-                {
-                    setCPtittle(vecMyCP[i],"霍尔X轴");
-                    break;
-                }
-                case 2:
-                {
-                    setCPtittle(vecMyCP[i],"霍尔Y轴");
-                    break;
-                }
-                case 3:
-                {
-                    setCPtittle(vecMyCP[i],"霍尔Z轴");
-                    break;
-                }
-                case 4:
-                {
-                    setCPtittle(vecMyCP[i],"涡流");
-                    break;
-                }
+        switch (CwindowDisp->windSensorType[i]) {
+            case 1:
+            {
+                setCPtittle(vecMyCP[i],"霍尔X轴");
+                break;
+            }
+            case 2:
+            {
+                setCPtittle(vecMyCP[i],"霍尔Y轴");
+                break;
+            }
+            case 3:
+            {
+                setCPtittle(vecMyCP[i],"霍尔Z轴");
+                break;
+            }
+            case 4:
+            {
+                setCPtittle(vecMyCP[i],"涡流");
+                break;
             }
         }
     }
@@ -645,11 +696,28 @@ void MainWindow::clearPlotboard(MyCustomPlot *&plotBoard)
     if(nullptr != plotBoard)
     {
         plotBoard->clearPlottables();    // 清除所有图形
-        plotBoard->clearItems();         // 清除所有图项
+        removePixmapItem(plotBoard);     // 清除所有图项
         plotBoard->xAxis->setLabel("");  // 清除X轴标签
         plotBoard->yAxis->setLabel("");  // 清除Y轴标签
         plotBoard->replot();             // 重绘
         setCPtittle(plotBoard,"");
+    }
+}
+
+void MainWindow::removePixmapItem(MyCustomPlot *&plotBoard)
+{
+    //从后向前遍历避免删除时索引问题
+    for (int i=plotBoard->itemCount()-1;i>=0;--i)
+    {
+        QCPAbstractItem* item = plotBoard->item(i);
+        if(item)
+        {
+            QCPItemPixmap* pixmapItem = dynamic_cast<QCPItemPixmap*>(item);
+            if(pixmapItem)
+            {
+                plotBoard->removeItem(pixmapItem);
+            }
+        }
     }
 }
 
@@ -1152,7 +1220,7 @@ void MainWindow::on_logout_triggered()
     //画板恢复空白
     setMutiWindow(1);
     ui->QcpText_1->clearPlottables();    // 清除所有图形
-    ui->QcpText_1->clearItems();         // 清除所有图项
+    removePixmapItem(ui->QcpText_1);     //若存在灰度图像，清除灰度图像，保留追踪器相关item
     ui->QcpText_1->xAxis->setLabel("");  // 清除X轴标签
     ui->QcpText_1->yAxis->setLabel("");  // 清除Y轴标签
     ui->QcpText_1->replot();             // 重绘
