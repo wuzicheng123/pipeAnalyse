@@ -140,45 +140,74 @@ void MainWindow::plotLineChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
         removePixmapItem(plotBoard);
     }
     int RowSize = QcpData2D.size();
-    //查找36个通道的最大最小值
-    //并进行归一化到-50-50转换
-    double ymin = 0,ymax = 0;
+//    //查找36个通道的最大最小值
+//    //并进行归一化到-50-50转换
+//    double ymin = 0,ymax = 0;
+//    //乘以采样间隔
+//    double xRealLower = windowStart*CprjConfig->dInterval;
+//    double xRealHigher = windowEnd*CprjConfig->dInterval;
+//    for(int i=0;i<RowSize;i++)
+//    {
+//        int ColumnSize = QcpData2D[i].size();
+//        for(int j=0;j<ColumnSize;j++)
+//        {
+//            double& dy = QcpData2D[i][j].value;
+//            QcpData2D[i][j].key = QcpData2D[i][j].key*CprjConfig->dInterval;
+//            //归一化
+//            //等距通道显示样式 每个通道value值映射到2，例如通道一为-50到50，通道二为-49到51，。。。。，通道36为-15到85。
+//            if(1 == axis || 2 == axis)
+//            {
+//                dy = dy/plotProcess::getInstance()->hallUpperLimitXY*50;
+//            }
+//            else if(3 == axis)
+//            {
+//                dy = dy/plotProcess::getInstance()->hallUpperLimitZ*50;
+//            }
+//            if(windowStart >= 0)
+//            {
+//                QcpData2D[i][j].key += xRealLower;
+//            }
+//            if(dy<ymin)
+//            {
+//                ymin = dy;
+//            }
+//            if(dy>ymax)
+//            {
+//                ymax = dy;
+//            }
+//            //给每个探头增加偏移量，从而每个盒子的36个探头一张图显示
+//            //45为36通道+间隔美观20行
+//            //按box号调整
+//            dy = dy + i + 36*boxNum;
+//        }
+//    }
+
+    //优化版代码
     //乘以采样间隔
     double xRealLower = windowStart*CprjConfig->dInterval;
     double xRealHigher = windowEnd*CprjConfig->dInterval;
+    double scaleFactor = 50.0;
+    double upperLimit = (1 == axis || 2 == axis) ? plotProcess::getInstance()->hallUpperLimitXY : plotProcess::getInstance()->hallUpperLimitZ;
     for(int i=0;i<RowSize;i++)
     {
         int ColumnSize = QcpData2D[i].size();
         for(int j=0;j<ColumnSize;j++)
         {
-            double& dy = QcpData2D[i][j].value;
-            QcpData2D[i][j].key = QcpData2D[i][j].key*CprjConfig->dInterval;
-            //归一化
-            //等距通道显示样式 每个通道value值映射到2，例如通道一为-50到50，通道二为-49到51，。。。。，通道36为-15到85。
-            if(1 == axis || 2 == axis)
+            QCPGraphData& data = QcpData2D[i][j];
+            data.key = data.key * CprjConfig->dInterval;
+            //归一化并偏移
+            if(1 == axis || 2 == axis || 3 == axis)
             {
-                dy = dy/plotProcess::getInstance()->hallUpperLimitXY*50;
+                data.value = data.value / upperLimit * scaleFactor + i + 36 * boxNum;
             }
-            else if(3 == axis)
+            else // axis 4
             {
-                dy = dy/plotProcess::getInstance()->hallUpperLimitZ*50;
+                data.value = data.value + i + 36 * boxNum;
             }
             if(windowStart >= 0)
             {
-                QcpData2D[i][j].key += xRealLower;
+                data.key += xRealLower;
             }
-            if(dy<ymin)
-            {
-                ymin = dy;
-            }
-            if(dy>ymax)
-            {
-                ymax = dy;
-            }
-            //给每个探头增加偏移量，从而每个盒子的36个探头一张图显示
-            //45为36通道+间隔美观20行
-            //按box号调整
-            dy = dy + i + 36*boxNum;
         }
     }
 
@@ -371,8 +400,12 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
             }
             else if(4 == axis)
             {
+                if(dy > 100)
+                {
+                    dy = 100;
+                }
                 //归一化，转换到0-1范围；
-                dy = 1-dy/65535;
+                dy = 1-dy/100;
             }
             //将二维映射到一维数组
             int index = elementSizeInBox*(boxSize-1-boxNum)+ColumnSizeOut*(RowSize-1-i)+j+columnOffset;
@@ -418,8 +451,145 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
             plotBoard->replot();
             return;
         }
-        //将OpenCV Mat转换为QImage
-        QImage image(grayMat.data,grayMat.cols,grayMat.rows,static_cast<int>(grayMat.step),QImage::Format_Grayscale8);
+
+//        //基于背景识别的分块处理（处理不同区域）
+//        // 预处理：中值滤波去噪（只对非背景区域）
+//        cv::Mat preprocessed = grayMat.clone();  // 先复制原图
+//        // 定义背景颜色范围（假设灰色背景的灰度值在[120, 135]之间）
+//        // 根据实际情况调整这些阈值
+//        int gray_low = 120;
+//        int gray_high = 135;
+//        // 创建背景掩码
+//        cv::Mat background_mask;
+//        inRange(grayMat, gray_low, gray_high, background_mask);
+//        // 对非背景区域应用中值滤波
+//        cv::Mat non_background;
+//        cv::Mat non_background_filtered;
+//        grayMat.copyTo(non_background, ~background_mask);  // 提取非背景区域
+//        medianBlur(non_background, non_background_filtered, 3);
+//        non_background_filtered.copyTo(preprocessed, ~background_mask);
+//        // 分块处理（只处理非背景区域）
+//        int block_size = 32;
+//        cv::Mat final_result = grayMat.clone();  // 初始化为原图，保留背景不变
+//        for (int y = 0; y < grayMat.rows; y += block_size) {
+//            for (int x = 0; x < grayMat.cols; x += block_size) {
+//                cv::Rect roi(x, y, cv::min(block_size, grayMat.cols - x),
+//                         cv::min(block_size, grayMat.rows - y));
+//                cv::Mat block = preprocessed(roi).clone();
+//                cv::Mat block_mask = background_mask(roi).clone();
+//                // 计算块中背景像素的比例
+//                int total_pixels = block.rows * block.cols;
+//                int background_pixels = countNonZero(block_mask);
+//                double background_ratio = static_cast<double>(background_pixels) / total_pixels;
+//                // 如果块中主要是背景（比如超过95%是背景），跳过处理
+//                if (background_ratio > 0.95) {
+//                    continue;  // 保持原背景不变
+//                }
+//                // 提取非背景区域进行处理
+//                cv::Mat non_bg_block;
+//                block.copyTo(non_bg_block, ~block_mask);
+//                // 计算非背景区域的梯度，决定插值策略
+//                cv::Mat grad_x, grad_y;
+//                Sobel(non_bg_block, grad_x, CV_32F, 1, 0, 3);
+//                Sobel(non_bg_block, grad_y, CV_32F, 0, 1, 3);
+//                cv::Mat magnitude;
+//                cv::magnitude(grad_x, grad_y, magnitude);
+//                double max_grad;
+//                minMaxLoc(magnitude, nullptr, &max_grad, nullptr, nullptr, ~block_mask);  // 只在非背景区域计算
+//                // 根据梯度选择插值方法
+//                cv::Mat processed_block;
+//                if (max_grad > 30) {
+//                    // 高梯度区域：使用保护边缘的插值
+//                    cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_CUBIC);
+//                    // 边缘增强（只增强非背景区域的边缘）
+//                    cv::Mat edges;
+//                    Canny(non_bg_block, edges, 50, 150);
+//                    // 创建与放大后图像相同大小的边缘掩码
+//                    cv::Mat edges_upscaled;
+//                    cv::resize(edges, edges_upscaled, processed_block.size(),
+//                           0, 0, cv::INTER_NEAREST);
+//                    // 增强边缘（但避免影响背景区域）
+//                    cv::Mat bg_mask_upscaled;
+//                    cv::resize(block_mask, bg_mask_upscaled, processed_block.size(),
+//                           0, 0, cv::INTER_NEAREST);
+//                    // 只在非背景区域增强边缘
+//                    edges_upscaled.setTo(0, bg_mask_upscaled > 0);  // 去除背景区域的边缘
+//                    processed_block.setTo(255, edges_upscaled > 0);
+//                } else {
+//                    // 平滑区域：使用高质量插值
+//                    cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_LANCZOS4);
+//                }
+//                // 缩小回原尺寸
+//                cv::resize(processed_block, processed_block, block.size(),
+//                       0, 0, cv::INTER_LANCZOS4);
+//                // 只将非背景区域的修改应用到结果中
+//                cv::Mat processed_non_bg;
+//                processed_block.copyTo(processed_non_bg, ~block_mask);
+//                processed_non_bg.copyTo(final_result(roi), ~block_mask);
+//            }
+//        }
+//        // 后处理：只对非背景区域进行轻度高斯模糊
+//        cv::Mat non_bg_result;
+//        final_result.copyTo(non_bg_result, ~background_mask);
+//        GaussianBlur(non_bg_result, non_bg_result, cv::Size(3, 3), 0.5);
+//        non_bg_result.copyTo(final_result, ~background_mask);
+//        // 对比度增强（只对非背景区域）
+//        cv::Mat non_bg_enhanced;
+//        final_result.copyTo(non_bg_enhanced, ~background_mask);
+//        normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
+//        non_bg_enhanced.copyTo(final_result, ~background_mask);
+
+        //基于背景识别的分块处理（处理不同区域）- 简化快速版本
+        // 预处理：中值滤波去噪（只对非背景区域）
+        cv::Mat preprocessed = grayMat.clone();  // 先复制原图
+        // 定义背景颜色范围（假设灰色背景的灰度值在[120, 135]之间）
+        // 根据实际情况调整这些阈值
+        int gray_low = 120;
+        int gray_high = 135;
+        // 创建背景掩码
+        cv::Mat background_mask;
+        cv::inRange(grayMat, gray_low, gray_high, background_mask);
+        // 对非背景区域应用中值滤波
+        cv::Mat non_background;
+        cv::Mat non_background_filtered;
+        grayMat.copyTo(non_background, ~background_mask);  // 提取非背景区域
+        cv::medianBlur(non_background, non_background_filtered, 3);
+        non_background_filtered.copyTo(preprocessed, ~background_mask);
+        // 分块处理（只处理非背景区域）
+        int block_size = 64;
+        cv::Mat final_result = grayMat.clone();  // 初始化为原图，保留背景不变
+        for (int y = 0; y < grayMat.rows; y += block_size) {
+            for (int x = 0; x < grayMat.cols; x += block_size) {
+                cv::Rect roi(x, y, cv::min(block_size, grayMat.cols - x),
+                         cv::min(block_size, grayMat.rows - y));
+                cv::Mat block = preprocessed(roi);
+                cv::Mat block_mask = background_mask(roi);
+                // 计算块中背景像素的比例
+                int total_pixels = block.rows * block.cols;
+                int background_pixels = cv::countNonZero(block_mask);
+                double background_ratio = static_cast<double>(background_pixels) / total_pixels;
+                // 如果块中主要是背景（比如超过95%是背景），跳过处理
+                if (background_ratio > 0.95) {
+                    continue;  // 保持原背景不变
+                }
+                // 简化：直接使用高质量插值，无需梯度计算
+                cv::Mat processed_block;
+                // 使用保护边缘的插值
+                cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_CUBIC);
+                // 缩小回原尺寸
+                cv::resize(processed_block, processed_block, block.size(), 0, 0, cv::INTER_CUBIC);
+                // 只将非背景区域的修改应用到结果中
+                processed_block.copyTo(final_result(roi), ~block_mask);
+            }
+        }
+        // 后处理：对比度增强（只对非背景区域）
+        cv::Mat non_bg_enhanced;
+        final_result.copyTo(non_bg_enhanced, ~background_mask);
+        cv::normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
+        non_bg_enhanced.copyTo(final_result, ~background_mask);
+
+        //转为QImage显示
+        QImage image(final_result.data,final_result.cols,final_result.rows,static_cast<int>(final_result.step),QImage::Format_Grayscale8);
         double yLowerAPI = plotBoard->yAxis->range().lower;
         double yUpperAPI = plotBoard->yAxis->range().upper;
         int imageHeight = RowSize*boxSize;
@@ -444,7 +614,7 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
         //yLowerAPI与yUpperAPI在0到imageHeight之间------显示图像局部区域
         else if(yLowerAPI>=0 && yLowerAPI<imageHeight && yUpperAPI>0 && yUpperAPI<=imageHeight)
         {
-            displayImage = image.copy(0,static_cast<int>(imageHeight-yUpperAPI),ColumnSizeOut,static_cast<int>(imageHeight-yLowerAPI));
+            displayImage = image.copy(0,static_cast<int>(imageHeight-yUpperAPI),ColumnSizeOut,static_cast<int>(yUpperAPI-yLowerAPI));
             topleftScaleY = 0.0;
             bottomrightScaleY = 1.0;
         }
@@ -827,9 +997,9 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
             }
         }
     }
-    m_plotting = false;
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
+    m_plotting = false;
     return 0;
 }
 

@@ -87,13 +87,13 @@ void MyCustomPlot::wheelEvent(QWheelEvent *event)
         m_timer = new QTimer;
         connect(m_timer,&QTimer::timeout,this,&MyCustomPlot::handleTimeout);
         m_timer->setSingleShot(true);
-        m_timer->start(50);
+        m_timer->start(100);
     }
     else {
         if(m_timer->isActive())
         {}
         else {
-            m_timer->start(50);
+            m_timer->start(100);
         }
     }
 }
