@@ -34,17 +34,20 @@ public:
     //boxNum为阿拉伯数字减一，循环变量
     void plotLineChartbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize);
     //doubleArray的外层数组0-代表X，1-Y。。。3代表Vortex（存储灰度图像处理数据），别的参数同上
-    //灰度图像处理函数
+    //灰度/彩色图像处理函数
     //doubleArray2D外层数组大小为4，0-X，1-Y以此类推
-    void plotGrayChartbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize, QVector<QVector<double>>&doubleArray2D);
-    //灰度图绘制子函数
+    //colorType==0 灰度图/colorType==1 彩色图
+    void plotGrayOrColorChartbySensorType(int sensorType, QMap<int,QVector<QVector<QCPGraphData>>>&qmCPData, MyCustomPlot*& plotBoard, int boxNum, int boxSize,
+                                          QVector<QVector<double>>&doubleArray2D,int colorType);
+    //灰度/彩色图绘制子函数
     //QcpData2D-36通道电磁数据
     //windowStart-图表开始点,windowEnd-图表结束点
     //plotBoard - MyCustomPlot画板
     //axis-对应坐标轴 1-X，2-Y，3-Z，4-Vortex
     //根据axis值传入对应的doubleArray
-    void plotGrayChartDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis,
-                                 int boxNum, int boxSize, QVector<double> &doubleArray);
+    //colorType==0 灰度图/colorType==1 彩色图
+    void plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData>>QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis,
+                                 int boxNum, int boxSize, QVector<double> &doubleArray,int colorType);
     //多窗体设置函数  //Num窗体数量
     void setMutiWindow(int Num);
     //设置图表标题

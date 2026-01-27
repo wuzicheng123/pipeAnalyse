@@ -294,14 +294,14 @@ void MainWindow::plotLineChartbySensorType(int sensorType, QMap<int, QVector<QVe
     }
 }
 
-void MainWindow::plotGrayChartbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard, int boxNum, int boxSize, QVector<QVector<double> > &doubleArray2D)
+void MainWindow::plotGrayOrColorChartbySensorType(int sensorType, QMap<int, QVector<QVector<QCPGraphData> > > &qmCPData, MyCustomPlot *&plotBoard, int boxNum, int boxSize, QVector<QVector<double> > &doubleArray2D, int colorType)
 {
     switch (sensorType) {
     case 1:{    //X轴
         if(qmCPData.find(1) != qmCPData.end())
         {
             QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[1];
-            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize,doubleArray2D[0]);
+            plotGrayOrColorChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,1,boxNum,boxSize,doubleArray2D[0],colorType);
         }
         break;
     }
@@ -309,7 +309,7 @@ void MainWindow::plotGrayChartbySensorType(int sensorType, QMap<int, QVector<QVe
         if(qmCPData.find(2) != qmCPData.end())
         {
             QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[2];
-            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize,doubleArray2D[1]);
+            plotGrayOrColorChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,2,boxNum,boxSize,doubleArray2D[1],colorType);
         }
         break;
     }
@@ -317,7 +317,7 @@ void MainWindow::plotGrayChartbySensorType(int sensorType, QMap<int, QVector<QVe
         if(qmCPData.find(3) != qmCPData.end())
         {
             QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[3];
-            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize,doubleArray2D[2]);
+            plotGrayOrColorChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,3,boxNum,boxSize,doubleArray2D[2],colorType);
         }
         break;
     }
@@ -325,14 +325,14 @@ void MainWindow::plotGrayChartbySensorType(int sensorType, QMap<int, QVector<QVe
         if(qmCPData.find(4) != qmCPData.end())
         {
             QVector<QVector<QCPGraphData>> &QcpData2D = qmCPData[4];
-            plotGrayChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize,doubleArray2D[3]);
+            plotGrayOrColorChartDataByAxis(QcpData2D,CwindowDisp->startPos,CwindowDisp->startPos+CwindowDisp->offset,plotBoard,4,boxNum,boxSize,doubleArray2D[3],colorType);
         }
         break;
     }
     }
 }
 
-void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize, QVector<double>&doubleArray)
+void MainWindow::plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData2D, qint64 windowStart, qint64 windowEnd, MyCustomPlot *&plotBoard, int axis, int boxNum, int boxSize, QVector<double>&doubleArray, int colorType)
 {
     //将QcpData2D转换为一维数组,并按axis分类修改数值，并归一化映射到0-255范围
     //未避免使用prepend,带来的额外开销，提前预设数组空间，按坐标填入数据
@@ -588,8 +588,54 @@ void MainWindow::plotGrayChartDataByAxis(QVector<QVector<QCPGraphData> > QcpData
         cv::normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
         non_bg_enhanced.copyTo(final_result, ~background_mask);
 
+        //彩色图像(添加额外处理)
+        cv::Mat colorImg;
+        QImage::Format imgFormat;
+        if(1 == colorType)
+        {
+            //白色区域检测（考虑连续性和面积）
+            //步骤1：检测高灰度值区域
+            cv::Mat whiteMask;
+            cv::threshold(final_result,whiteMask,254,255,cv::THRESH_BINARY);
+            //步骤2：形态学操作，去除小的白色噪点
+            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE,cv::Size(3,3));
+            cv::morphologyEx(whiteMask,whiteMask,cv::MORPH_CLOSE,kernel);
+            //步骤3：查找白色连通区域
+            std::vector<std::vector<cv::Point>> contours;
+            cv::findContours(whiteMask,contours,cv::RETR_EXTERNAL,cv::CHAIN_APPROX_SIMPLE);
+            //步骤4：创建只包含大片白色区域的掩码
+            int minWhiteArea = 100;
+            cv::Mat largeWhiteMask = cv::Mat::zeros(final_result.size(),CV_8UC1);
+            for(const auto& contour:contours)
+            {
+                double area = cv::contourArea(contour);
+                if(area >= minWhiteArea)
+                {
+                    cv::drawContours(largeWhiteMask,std::vector<std::vector<cv::Point>>{contour},0,255,cv::FILLED);
+                }
+            }
+            //步骤5:应用彩色映射
+            cv::applyColorMap(final_result,colorImg,cv::COLORMAP_JET);
+            //步骤6：保持大片白色区域为白色
+            for (int i=0;i<colorImg.rows;i++) {
+                for (int j=0;j<colorImg.cols;j++) {
+                    if(largeWhiteMask.at<uchar>(i,j) > 0)
+                    {
+                        colorImg.at<cv::Vec3b>(i,j) = cv::Vec3b(255,255,255);
+                    }
+                }
+            }
+            cv::cvtColor(colorImg,final_result,cv::COLOR_BGR2RGB);
+            imgFormat = QImage::Format_RGB888;
+        }
+        //灰度
+        else
+        {
+            imgFormat = QImage::Format_Grayscale8;
+        }
+
         //转为QImage显示
-        QImage image(final_result.data,final_result.cols,final_result.rows,static_cast<int>(final_result.step),QImage::Format_Grayscale8);
+        QImage image(final_result.data,final_result.cols,final_result.rows,static_cast<int>(final_result.step),imgFormat);
         double yLowerAPI = plotBoard->yAxis->range().lower;
         double yUpperAPI = plotBoard->yAxis->range().upper;
         int imageHeight = RowSize*boxSize;
@@ -988,11 +1034,11 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
                 }
                 else if(2 == CwindowDisp->windPlotType[i]) //灰度图
                 {
-                    plotGrayChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize,doubleArray);
+                    plotGrayOrColorChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize,doubleArray,0);
                 }
                 else if(3 == CwindowDisp->windPlotType[i]) //彩色图
                 {
-
+                    plotGrayOrColorChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize,doubleArray,1);
                 }
             }
         }
