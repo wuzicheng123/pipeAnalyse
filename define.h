@@ -1,13 +1,15 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-#include <QString>
 #include <QElapsedTimer>
 #include <QThread>
 #include <QVector>
 #include <QMap>
 #include <QFile>
 #include <cmath>
+#include <QtMath>
+#include "commonfun.h"
+#include <float.h>
 
 class dataModel
 {
@@ -141,6 +143,8 @@ class projectConfigure
 {
 public:
     double dInterval;//采样间隔
+    double outerDiameter;//外管径
+    double dwallthickness;//壁厚
     QString dataDirPath;//当前文件夹路径（顶层项目路径）
     QVector<QString>boxDirPath;//每个盒子采集的数据，dataDirPath下的子目录（例如：101、102、。。。。）（完整路径）
     QVector<QVector<QString>>fileNameVecByBox;//每个盒子下的文件名数组（.bin）
@@ -150,6 +154,8 @@ public:
     projectConfigure()
     {
         dInterval = 0;
+        outerDiameter = 0.0;
+        dwallthickness = 0.0;
         dataDirPath = "";
     }
 };
@@ -217,6 +223,8 @@ public:
     QString name;
     QString discript;
     double sampleinterval;
+    double outerDiameter;//外管径
+    double dwallthickness;//壁厚
     QString wallthicknesstype;
     QString datapath;
     QString createtime;
@@ -228,12 +236,62 @@ public:
         name = "";
         discript = "";
         sampleinterval = 0.0;
+        outerDiameter = 0.0;
+        dwallthickness = 0.0;
         wallthicknesstype = "";
         datapath = "";
         createtime = "";
         creator = -1;
         creatorName = "";
     }
+};
+
+//缺陷分析
+struct dataPoint{
+    double x;//采样点序号（或距离，这里统一使用序号）
+    double y;//磁场强度
+    quint16 rawY;//原始场强
+};
+
+// 辅助结构：存储极值点索引
+struct ExtremaPoint {
+    int index;
+    bool isMax; // true:极大值, false:极小值
+};
+
+//单个通道的缺陷候选（极值对）
+struct DefectCandidate{
+    int channel;
+    double start_mm;   // 起始距离（毫米）
+    double end_mm;     // 结束距离（毫米）
+    double peakToPeak; // 峰峰值
+
+    bool operator==(const DefectCandidate& e) const {
+        if(channel==e.channel && isEqual(start_mm,e.start_mm) &&
+                isEqual(end_mm,e.end_mm) && isEqual(peakToPeak,e.peakToPeak))
+            return true;
+        return false;
+    }
+};
+
+//聚合后的缺陷事件
+struct DefectEvent{
+    QVector<int> channels; //所有涉及的通道号
+    double axialStart_mm;             // 轴向起始（最小）
+    double axialEnd_mm;               // 轴向结束（最大）
+    double axialLength_mm;            // 轴向长度
+    int minChannel, maxChannel;       // 通道范围
+    QVector<DefectCandidate> candidates; // 原始候选（用于形状分析）
+    DefectEvent() : axialStart_mm(DBL_MAX), axialEnd_mm(-1), axialLength_mm(0),
+                        minChannel(INT_MAX), maxChannel(-1) {}
+};
+
+// 缺陷类型枚举
+enum DefectType {
+    OrdinaryLoss,   // 普通金属损失
+    Nozzle,         // 接管
+    Patch,          // 补板
+    GirthWeld       // 环焊缝
 };
 
 Q_DECLARE_METATYPE(dataModel)

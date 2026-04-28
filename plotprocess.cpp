@@ -540,14 +540,14 @@ void plotProcess::handledataModel2PlotProcessBybox(QVector<QMap<int, QVector<dat
     dataPreProcessingBybox(m_CPDataVec,onePreCPDataVec,startPos);
     dataService::getInstance()->m_dataRwLock.unlock();
     //emit数据发送到mainwindow
-    emit plotDataReadyBybox(m_CPDataVec);
+    emit plotDataReadyBybox(m_CPDataVec,0);
 }
 
-void plotProcess::handleplotCacheDataRequestBybox()
+void plotProcess::handleplotCacheDataRequestBybox(int updateType)
 {
     if(!m_CPDataVec.empty())
     {
-        emit plotDataReadyBybox(m_CPDataVec);
+        emit plotDataReadyBybox(m_CPDataVec,updateType);
     }
 }
 

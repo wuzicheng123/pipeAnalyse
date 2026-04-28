@@ -19,7 +19,7 @@ public:
     void trans2newDlg();
     void setCurrentUser(userDataModel userData);
     void trans2editDlg(int projectId, QString prjName, QString prjDiscribe, QString thicknessType,
-                       double sampleinterval, QString datapath, int row);
+                       double sampleinterval, double thicknessNumber, double outerDiameter, QString datapath, int row);
     void trans2detailDlg(projectDataModel& oneDatamodel);
 
 signals:

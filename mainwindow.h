@@ -3,12 +3,12 @@
 
 #include <QMainWindow>
 #include "define.h"
-#include "qcustomplot.h"
 #include "mycustomplot.h"
 #include "windownumsetdialog.h"
 #include "logindlg.h"
 #include "databaseworker.h"
 #include <QStandardItemModel>
+#include "defectdetector.h"
 
 namespace Ui {
 class MainWindow;
@@ -73,13 +73,19 @@ public:
     QStandardItemModel *prjTableModel;
     //优化滚轮和拖动手势显示效果，在绘图中不触发(只针对滚轮和拖动，和上一页下一页、未来跳转功能无关)
     bool m_plotting;//false未进行中，true绘制中
+    //缺陷分析是否正在进行标志
+    bool m_detectDefectingFlag;//false未进行中，true进行分析中
+    QString m_detectDefectingPrjName;//当前正在缺陷分析的项目名
+    int m_grayScaleQsliderValue;//当前显示灰度图的灰度范围参数
+    bool bupdateGrayScaleing;//当前是否在修改算法执行中
 
 signals:
     //startPos需大于等于0（根据主窗体CwindowDisp类中的窗体实际坐标轴判定，从文件中开始读取的位置，因此必须大于0）
     //添加y轴的范围
     //无需传入qsfilePath，在槽函数中会拼接生成,且当前所读文件会记录在curFileNamevec中
     void modelDataRequest(QString& qsfilePath,qint64 startPos,qint64 offset);
-    void plotCacheDataRequestBybox();
+    //修改类型，update==0全部修改，update==1修改灰度和伪彩色
+    void plotCacheDataRequestBybox(int updateType);
     void initalWinNum();
     void queryAllUsers();
     void deleteUserRequest(int row,QString name);
@@ -87,9 +93,10 @@ signals:
     //type==1打开工程按钮中逻辑;2工程详细按钮逻辑
     void queryProjectById(int id,int type);
     void deleteProjectRequest(int row,int projectId);
+    void startDetectDefects(double a_mm, double innerDiameter,projectConfigure CprjConfig);
 
 private slots:
-    int handlePlotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec);
+    int handlePlotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec, int updateType);
     void handleWindowNumSetData(int windNum,int* windPlotType,int* windSensorType);
     void handleLoginResult(int id, QString name, QString password, QString permission);
     void handleQryAllUsersResult(QVector<userDataModel>&vecUsers);
@@ -102,6 +109,7 @@ private slots:
     void handleShowEditProject(int row,projectDataModel& onePrj);
     void handleShowDeleteProject(int row);
     void handleShowDetailProject(projectDataModel& onePrj);
+    void handleDetectDefectComplete();
     //原有触发逻辑都不变，只有在读的时候多个盒子一起读，在转换的时候多个盒子一起转换
     void on_plotWindow_triggered();
 
@@ -139,12 +147,20 @@ private slots:
 
     void on_detailPrj_clicked();
 
+    void on_detectDefect_triggered();
+
+    void on_grayscaleSetSlider_valueChanged(int value);
+
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);
 
 private:
     Ui::MainWindow *ui;
     databaseWorker *m_dbWorker;
+    defectdetector *m_defectdetectorWorker;
+    //灰度值设置范围上下限，用于灰度图像显示
+    int grayValueLower;
+    int grayValueUpper;
 
 public:
     projectConfigure *CprjConfig = nullptr;

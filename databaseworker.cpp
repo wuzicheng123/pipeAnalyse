@@ -197,8 +197,8 @@ void databaseWorker::handleQueryAllProjects()
         qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
         return;
     }
-    sql = QString("select name,discript,wallthicknesstype,sampleinterval,"
-                  "createtime,creator,id from project");
+    sql = QString("select name,discript,wallthicknesstype,sampleinterval,wallthicknessnumber,"
+                  "outerDiameter,createtime,creator,id from project");
     ret = query.exec(sql);
     QVector<projectDataModel>vecPrjs;
     if(ret)
@@ -206,16 +206,18 @@ void databaseWorker::handleQueryAllProjects()
         int nfield = query.record().count();
         while(query.next())
         {
-            if(7 == nfield)
+            if(9 == nfield)
             {
                 projectDataModel oneProject;
                 oneProject.name = query.value(0).toString();
                 oneProject.discript = query.value(1).toString();
                 oneProject.wallthicknesstype = query.value(2).toString();
                 oneProject.sampleinterval = query.value(3).toDouble();
-                oneProject.createtime = query.value(4).toString();
-                oneProject.creator = query.value(5).toInt();
-                oneProject.id = query.value(6).toInt();
+                oneProject.dwallthickness = query.value(4).toDouble();
+                oneProject.outerDiameter = query.value(5).toDouble();
+                oneProject.createtime = query.value(6).toString();
+                oneProject.creator = query.value(7).toInt();
+                oneProject.id = query.value(8).toInt();
                 vecPrjs.append(oneProject);
             }
         }
@@ -256,7 +258,8 @@ void databaseWorker::handleQueryProjectById(int id,int type)
     }
     if(1 == type)
     {
-        sql = QString("select name,sampleinterval,datapath from project where id=%1").arg(id);
+        sql = QString("select name,sampleinterval,wallthicknessnumber,"
+                      "outerDiameter,datapath from project where id=%1").arg(id);
         ret = query.exec(sql);
         if(ret)
         {
@@ -264,12 +267,14 @@ void databaseWorker::handleQueryProjectById(int id,int type)
             if(query.next())
             {
 
-                if(3 == nField)
+                if(5 == nField)
                 {
                     projectDataModel oneProject;
                     oneProject.name = query.value(0).toString();
                     oneProject.sampleinterval = query.value(1).toDouble();
-                    oneProject.datapath = query.value(2).toString();
+                    oneProject.dwallthickness = query.value(2).toDouble();
+                    oneProject.outerDiameter = query.value(3).toDouble();
+                    oneProject.datapath = query.value(4).toString();
                     oneProject.id = id;
                     //emit
                     emit qryProjectByIdResult(oneProject);
@@ -279,21 +284,24 @@ void databaseWorker::handleQueryProjectById(int id,int type)
     }
     else if(2 == type)
     {
-        sql = QString("select name,discript,wallthicknesstype,sampleinterval,datapath from project where id=%1").arg(id);
+        sql = QString("select name,discript,wallthicknesstype,sampleinterval,wallthicknessnumber,"
+                      "outerDiameter,datapath from project where id=%1").arg(id);
         ret = query.exec(sql);
         if(ret)
         {
             int nField = query.record().count();
             if(query.next())
             {
-                if(5 == nField)
+                if(7 == nField)
                 {
                     projectDataModel oneProject;
                     oneProject.name = query.value(0).toString();
                     oneProject.discript = query.value(1).toString();
                     oneProject.wallthicknesstype = query.value(2).toString();
                     oneProject.sampleinterval = query.value(3).toDouble();
-                    oneProject.datapath = query.value(4).toString();
+                    oneProject.dwallthickness = query.value(4).toDouble();
+                    oneProject.outerDiameter = query.value(5).toDouble();
+                    oneProject.datapath = query.value(6).toString();
                     //emit
                     emit showDetailProject(oneProject);
                 }
@@ -319,9 +327,9 @@ void databaseWorker::handleNewProjectRequest(projectDataModel &projectData)
         qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
         return;
     }
-    sql = QString("insert into project (name,discript,sampleinterval,wallthicknesstype,"
-                  "datapath,creator) values('%1','%2',%3,'%4',(?),%5)").arg(projectData.name)
-            .arg(projectData.discript).arg(projectData.sampleinterval)
+    sql = QString("insert into project (name,discript,sampleinterval,wallthicknessnumber,outerDiameter,wallthicknesstype,"
+                  "datapath,creator) values('%1','%2',%3,'%4','%5','%6',(?),%8)").arg(projectData.name)
+            .arg(projectData.discript).arg(projectData.sampleinterval).arg(projectData.dwallthickness).arg(projectData.outerDiameter)
             .arg(projectData.wallthicknesstype).arg(projectData.creator);
     //使用占位符,Qt自动处理转义
     query.prepare(sql);
@@ -331,7 +339,8 @@ void databaseWorker::handleNewProjectRequest(projectDataModel &projectData)
     {
         //tableview添加显示
         //查询已添加的结果
-        sql = QString("select name,discript,sampleinterval,wallthicknesstype,createtime,"
+        sql = QString("select name,discript,sampleinterval,wallthicknessnumber,"
+                      "outerDiameter,wallthicknesstype,createtime,"
                       "creator,id from project where name='%1' order by createtime desc")
                 .arg(projectData.name);
         ret = query.exec(sql);
@@ -340,16 +349,18 @@ void databaseWorker::handleNewProjectRequest(projectDataModel &projectData)
             int nField = query.record().count();
             if(query.next())
             {
-                if(7 == nField)
+                if(9 == nField)
                 {
                     projectDataModel oneprjDM;
                     oneprjDM.name = query.value(0).toString();
                     oneprjDM.discript =query.value(1).toString();
                     oneprjDM.sampleinterval = query.value(2).toDouble();
-                    oneprjDM.wallthicknesstype = query.value(3).toString();
-                    oneprjDM.createtime = query.value(4).toString();
+                    oneprjDM.dwallthickness = query.value(3).toDouble();
+                    oneprjDM.outerDiameter = query.value(4).toDouble();
+                    oneprjDM.wallthicknesstype = query.value(5).toString();
+                    oneprjDM.createtime = query.value(6).toString();
                     oneprjDM.creatorName = projectData.creatorName;
-                    oneprjDM.id = query.value(6).toInt();
+                    oneprjDM.id = query.value(8).toInt();
                     emit showAddNewProject(oneprjDM);
                 }
             }
@@ -374,9 +385,10 @@ void databaseWorker::handleEditProjectRequest(int row, projectDataModel &project
         qDebug()<<"use pipeanalyse err;"<<query.lastError().text();
         return;
     }
-    sql = QString("update project set name='%1',discript='%2',sampleinterval=%3,"
-                  "wallthicknesstype='%4',datapath='%5' where id=%6").arg(projectData.name)
-            .arg(projectData.discript).arg(projectData.sampleinterval).arg(projectData.wallthicknesstype)
+    sql = QString("update project set name='%1',discript='%2',sampleinterval=%3,wallthicknessnumber=%4,"
+                  "outerDiameter=%5,wallthicknesstype='%6',datapath='%7' where id=%8").arg(projectData.name)
+            .arg(projectData.discript).arg(projectData.sampleinterval).arg(projectData.dwallthickness)
+            .arg(projectData.outerDiameter).arg(projectData.wallthicknesstype)
             .arg(projectData.datapath).arg(projectData.id);
     //使用占位符,Qt自动处理转义
     query.prepare(sql);

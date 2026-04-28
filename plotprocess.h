@@ -36,11 +36,12 @@ public:
     void initalPlotProcess();
 
 signals:
-    int plotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec);
+    //修改类型，update==0全部修改，update==1修改灰度和伪彩色
+    int plotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec,int updateType);
 
 public slots:
     void handledataModel2PlotProcessBybox(QVector<QMap<int,QVector<dataModel>>>&qmDataModelVec,QVector<QMap<int,QVector<dataModel>>>&onePreDatavec,qint64 startPos);
-    void handleplotCacheDataRequestBybox();
+    void handleplotCacheDataRequestBybox(int updateType);
 
 private:
     explicit plotProcess(QObject *parent = nullptr);

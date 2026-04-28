@@ -19,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle("管道分析软件");
 
+    qRegisterMetaType<projectConfigure>("projectConfigure");
     qRegisterMetaType<QVector<QMap<int,QVector<QVector<QCPGraphData>>>>>("QVector<QMap<int,QVector<QVector<QCPGraphData>>>>&");
     connect(this,&MainWindow::modelDataRequest,dataService::getInstance(),&dataService::handleModelDataRequest);
     connect(this,&MainWindow::plotCacheDataRequestBybox,plotProcess::getInstance(),&plotProcess::handleplotCacheDataRequestBybox);
@@ -45,6 +46,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->userManage->setEnabled(false);
     ui->logout->setEnabled(false);
     ui->windowNumSet->setEnabled(false);
+    ui->grayscaleSetSlider->setVisible(false);
+    m_grayScaleQsliderValue = 100;
+    bupdateGrayScaleing = false;
+    grayValueLower = 0;
+    grayValueUpper = 255;
 
     CwindowDisp->windNum = 1;
     CwindowDisp->windSensorType[0] = 1;
@@ -72,8 +78,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->userTableView->setGridStyle(Qt::NoPen);
     //项目列表界面--------------------------------------------------
     prjTableModel = new QStandardItemModel(this);
-    prjTableModel->setColumnCount(6);
-    prjTableModel->setHorizontalHeaderLabels({"项目名","项目描述","壁厚","采样间距","创建时间","创建人"});
+    prjTableModel->setColumnCount(8);
+    prjTableModel->setHorizontalHeaderLabels({"项目名","项目描述","壁厚","采样间距","壁厚值","外管径","创建时间","创建人"});
     ui->projectTableView->setModel(prjTableModel);
     ui->projectTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->projectTableView->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -81,7 +87,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // 设置列宽
     ui->projectTableView->horizontalHeader()->setStretchLastSection(true);
     ui->projectTableView->setColumnWidth(0, 100);
-    ui->projectTableView->setColumnWidth(4, 180);
+    ui->projectTableView->setColumnWidth(6, 180);
     // 设置表格样式
     ui->projectTableView->setAlternatingRowColors(true);
     ui->projectTableView->verticalHeader()->setVisible(false);
@@ -90,7 +96,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->closePrj->setEnabled(false);
 
     m_dbWorker = nullptr;
+    m_defectdetectorWorker = nullptr;
     m_plotting = false;
+    m_detectDefectingFlag = false;
+    m_detectDefectingPrjName = "";
 }
 
 MainWindow::~MainWindow()
@@ -452,93 +461,6 @@ void MainWindow::plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData> > 
             return;
         }
 
-//        //基于背景识别的分块处理（处理不同区域）
-//        // 预处理：中值滤波去噪（只对非背景区域）
-//        cv::Mat preprocessed = grayMat.clone();  // 先复制原图
-//        // 定义背景颜色范围（假设灰色背景的灰度值在[120, 135]之间）
-//        // 根据实际情况调整这些阈值
-//        int gray_low = 120;
-//        int gray_high = 135;
-//        // 创建背景掩码
-//        cv::Mat background_mask;
-//        inRange(grayMat, gray_low, gray_high, background_mask);
-//        // 对非背景区域应用中值滤波
-//        cv::Mat non_background;
-//        cv::Mat non_background_filtered;
-//        grayMat.copyTo(non_background, ~background_mask);  // 提取非背景区域
-//        medianBlur(non_background, non_background_filtered, 3);
-//        non_background_filtered.copyTo(preprocessed, ~background_mask);
-//        // 分块处理（只处理非背景区域）
-//        int block_size = 32;
-//        cv::Mat final_result = grayMat.clone();  // 初始化为原图，保留背景不变
-//        for (int y = 0; y < grayMat.rows; y += block_size) {
-//            for (int x = 0; x < grayMat.cols; x += block_size) {
-//                cv::Rect roi(x, y, cv::min(block_size, grayMat.cols - x),
-//                         cv::min(block_size, grayMat.rows - y));
-//                cv::Mat block = preprocessed(roi).clone();
-//                cv::Mat block_mask = background_mask(roi).clone();
-//                // 计算块中背景像素的比例
-//                int total_pixels = block.rows * block.cols;
-//                int background_pixels = countNonZero(block_mask);
-//                double background_ratio = static_cast<double>(background_pixels) / total_pixels;
-//                // 如果块中主要是背景（比如超过95%是背景），跳过处理
-//                if (background_ratio > 0.95) {
-//                    continue;  // 保持原背景不变
-//                }
-//                // 提取非背景区域进行处理
-//                cv::Mat non_bg_block;
-//                block.copyTo(non_bg_block, ~block_mask);
-//                // 计算非背景区域的梯度，决定插值策略
-//                cv::Mat grad_x, grad_y;
-//                Sobel(non_bg_block, grad_x, CV_32F, 1, 0, 3);
-//                Sobel(non_bg_block, grad_y, CV_32F, 0, 1, 3);
-//                cv::Mat magnitude;
-//                cv::magnitude(grad_x, grad_y, magnitude);
-//                double max_grad;
-//                minMaxLoc(magnitude, nullptr, &max_grad, nullptr, nullptr, ~block_mask);  // 只在非背景区域计算
-//                // 根据梯度选择插值方法
-//                cv::Mat processed_block;
-//                if (max_grad > 30) {
-//                    // 高梯度区域：使用保护边缘的插值
-//                    cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_CUBIC);
-//                    // 边缘增强（只增强非背景区域的边缘）
-//                    cv::Mat edges;
-//                    Canny(non_bg_block, edges, 50, 150);
-//                    // 创建与放大后图像相同大小的边缘掩码
-//                    cv::Mat edges_upscaled;
-//                    cv::resize(edges, edges_upscaled, processed_block.size(),
-//                           0, 0, cv::INTER_NEAREST);
-//                    // 增强边缘（但避免影响背景区域）
-//                    cv::Mat bg_mask_upscaled;
-//                    cv::resize(block_mask, bg_mask_upscaled, processed_block.size(),
-//                           0, 0, cv::INTER_NEAREST);
-//                    // 只在非背景区域增强边缘
-//                    edges_upscaled.setTo(0, bg_mask_upscaled > 0);  // 去除背景区域的边缘
-//                    processed_block.setTo(255, edges_upscaled > 0);
-//                } else {
-//                    // 平滑区域：使用高质量插值
-//                    cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_LANCZOS4);
-//                }
-//                // 缩小回原尺寸
-//                cv::resize(processed_block, processed_block, block.size(),
-//                       0, 0, cv::INTER_LANCZOS4);
-//                // 只将非背景区域的修改应用到结果中
-//                cv::Mat processed_non_bg;
-//                processed_block.copyTo(processed_non_bg, ~block_mask);
-//                processed_non_bg.copyTo(final_result(roi), ~block_mask);
-//            }
-//        }
-//        // 后处理：只对非背景区域进行轻度高斯模糊
-//        cv::Mat non_bg_result;
-//        final_result.copyTo(non_bg_result, ~background_mask);
-//        GaussianBlur(non_bg_result, non_bg_result, cv::Size(3, 3), 0.5);
-//        non_bg_result.copyTo(final_result, ~background_mask);
-//        // 对比度增强（只对非背景区域）
-//        cv::Mat non_bg_enhanced;
-//        final_result.copyTo(non_bg_enhanced, ~background_mask);
-//        normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
-//        non_bg_enhanced.copyTo(final_result, ~background_mask);
-
         //基于背景识别的分块处理（处理不同区域）- 简化快速版本
         // 预处理：中值滤波去噪（只对非背景区域）
         cv::Mat preprocessed = grayMat.clone();  // 先复制原图
@@ -555,38 +477,57 @@ void MainWindow::plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData> > 
         grayMat.copyTo(non_background, ~background_mask);  // 提取非背景区域
         cv::medianBlur(non_background, non_background_filtered, 3);
         non_background_filtered.copyTo(preprocessed, ~background_mask);
-        // 分块处理（只处理非背景区域）
-        int block_size = 64;
-        cv::Mat final_result = grayMat.clone();  // 初始化为原图，保留背景不变
-        for (int y = 0; y < grayMat.rows; y += block_size) {
-            for (int x = 0; x < grayMat.cols; x += block_size) {
-                cv::Rect roi(x, y, cv::min(block_size, grayMat.cols - x),
-                         cv::min(block_size, grayMat.rows - y));
-                cv::Mat block = preprocessed(roi);
-                cv::Mat block_mask = background_mask(roi);
-                // 计算块中背景像素的比例
-                int total_pixels = block.rows * block.cols;
-                int background_pixels = cv::countNonZero(block_mask);
-                double background_ratio = static_cast<double>(background_pixels) / total_pixels;
-                // 如果块中主要是背景（比如超过95%是背景），跳过处理
-                if (background_ratio > 0.95) {
-                    continue;  // 保持原背景不变
-                }
-                // 简化：直接使用高质量插值，无需梯度计算
-                cv::Mat processed_block;
-                // 使用保护边缘的插值
-                cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_CUBIC);
-                // 缩小回原尺寸
-                cv::resize(processed_block, processed_block, block.size(), 0, 0, cv::INTER_CUBIC);
-                // 只将非背景区域的修改应用到结果中
-                processed_block.copyTo(final_result(roi), ~block_mask);
+        //----------新逻辑，通过滑动条设置灰度图范围，提升对比度，替代后文算法----
+        //创建查找表(0~255)
+        uchar lut[256];
+        for(int i=0;i<256;i++)
+        {
+            if(i <= grayValueLower)
+                lut[i] = 0;
+            else if(i >= grayValueUpper)
+                lut[i] = 255;
+            else {
+                lut[i] = static_cast<uchar>((i-grayValueLower)*255/(grayValueUpper-grayValueLower));
             }
         }
-        // 后处理：对比度增强（只对非背景区域）
-        cv::Mat non_bg_enhanced;
-        final_result.copyTo(non_bg_enhanced, ~background_mask);
-        cv::normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
-        non_bg_enhanced.copyTo(final_result, ~background_mask);
+        cv::Mat final_result;
+        cv::LUT(grayMat,cv::Mat(1,256,CV_8UC1,lut),final_result);
+        //---------------------------新逻辑----------------------------
+
+//---------下述代码为对比度增强，现按需求修改为通过滑动条修改灰度取值范围，以此增加对比度，因此下述原逻辑代码注释保留---------------
+//        cv::Mat final_result = grayMat.clone();  // 初始化为原图，保留背景不变
+//        // 分块处理（只处理非背景区域）
+//        int block_size = 64;
+//        for (int y = 0; y < grayMat.rows; y += block_size) {
+//            for (int x = 0; x < grayMat.cols; x += block_size) {
+//                cv::Rect roi(x, y, cv::min(block_size, grayMat.cols - x),
+//                         cv::min(block_size, grayMat.rows - y));
+//                cv::Mat block = preprocessed(roi);
+//                cv::Mat block_mask = background_mask(roi);
+//                // 计算块中背景像素的比例
+//                int total_pixels = block.rows * block.cols;
+//                int background_pixels = cv::countNonZero(block_mask);
+//                double background_ratio = static_cast<double>(background_pixels) / total_pixels;
+//                // 如果块中主要是背景（比如超过95%是背景），跳过处理
+//                if (background_ratio > 0.95) {
+//                    continue;  // 保持原背景不变
+//                }
+//                // 简化：直接使用高质量插值，无需梯度计算
+//                cv::Mat processed_block;
+//                // 使用保护边缘的插值
+//                cv::resize(block, processed_block, cv::Size(), 2, 2, cv::INTER_CUBIC);
+//                // 缩小回原尺寸
+//                cv::resize(processed_block, processed_block, block.size(), 0, 0, cv::INTER_CUBIC);
+//                // 只将非背景区域的修改应用到结果中
+//                processed_block.copyTo(final_result(roi), ~block_mask);
+//            }
+//        }
+//        // 后处理：对比度增强（只对非背景区域）
+//        cv::Mat non_bg_enhanced;
+//        final_result.copyTo(non_bg_enhanced, ~background_mask);
+//        cv::normalize(non_bg_enhanced, non_bg_enhanced, 0, 255, cv::NORM_MINMAX);
+//        non_bg_enhanced.copyTo(final_result, ~background_mask);
+//------------------------------------------------------分界线------------------------------------------------------------
 
         //彩色图像(添加额外处理)
         cv::Mat colorImg;
@@ -893,10 +834,10 @@ void MainWindow::initialDatabase()
         connect(this,&MainWindow::deleteUserRequest,m_dbWorker,&databaseWorker::handleDeleteUserRequest);
         connect(m_dbWorker,&databaseWorker::showDeleteUser,this,&MainWindow::handleShowDeleteUser);
         connect(this,&MainWindow::queryAllProjects,m_dbWorker,&databaseWorker::handleQueryAllProjects);
+        qRegisterMetaType<projectDataModel>("projectDataModel&");
         qRegisterMetaType<QVector<projectDataModel>>("QVector<projectDataModel>&");
         connect(m_dbWorker,&databaseWorker::qryAllPrjsResult,this,&MainWindow::handleQryAllPrjsResult);
         connect(this,&MainWindow::queryProjectById,m_dbWorker,&databaseWorker::handleQueryProjectById);
-        qRegisterMetaType<projectDataModel>("projectDataModel&");
         connect(m_dbWorker,&databaseWorker::qryProjectByIdResult,this,&MainWindow::handleQryProjectByIdResult);
         connect(m_dbWorker,&databaseWorker::showAddNewProject,this,&MainWindow::handleShowAddNewProject);
         connect(m_dbWorker,&databaseWorker::showEditProject,this,&MainWindow::handleShowEditProject);
@@ -993,7 +934,7 @@ void MainWindow::testOpenCV()
     qDebug() << "\n=== 测试通过！ ===";
 }
 
-int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec)
+int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec,int updateType)
 {
     dataService::getInstance()->m_dataRwLock.lockForRead();
     QElapsedTimer qElapTimer;
@@ -1028,7 +969,7 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
             //根据窗口数量，循环刷新
             for(int i=0;i<CwindowDisp->windNum;i++)
             {
-                if(1 == CwindowDisp->windPlotType[i]) //曲线图
+                if(1 == CwindowDisp->windPlotType[i] && updateType==0) //曲线图
                 {
                     plotLineChartbySensorType(CwindowDisp->windSensorType[i],qmCPData,vecMyCP[i],k,boxSize);
                 }
@@ -1046,19 +987,33 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
     m_plotting = false;
+    if(bupdateGrayScaleing)
+        bupdateGrayScaleing = false;
     return 0;
 }
 
 void MainWindow::handleWindowNumSetData(int windNum, int *windPlotType, int *windSensorType)
 {
     CwindowDisp->windNum = windNum;
+    bool bgraySliderShow = false;
     for(int i=0;i<4;i++)
     {
         CwindowDisp->windPlotType[i]=windPlotType[i];
+        if(i<windNum)
+        {
+            if(2==windPlotType[i] || 3==windPlotType[i])
+            {
+                bgraySliderShow = true;
+            }
+        }
         CwindowDisp->windSensorType[i]=windSensorType[i];
     }
+    if(!bgraySliderShow)
+        ui->grayscaleSetSlider->setVisible(false);
+    else
+        ui->grayscaleSetSlider->setVisible(true);
     setMutiWindow(CwindowDisp->windNum);
-    emit plotCacheDataRequestBybox();
+    emit plotCacheDataRequestBybox(0);
     if(nullptr != windPlotType)
     {
         delete[] windPlotType;
@@ -1160,12 +1115,16 @@ void MainWindow::handleQryAllPrjsResult(QVector<projectDataModel> &vecPrjs)
         QStandardItem* discriptItem = new QStandardItem(vecPrjs[i].discript);
         QStandardItem* wallthicknessItem = new QStandardItem(vecPrjs[i].wallthicknesstype);
         QStandardItem* sampleintervalItem = new QStandardItem(QString::number(vecPrjs[i].sampleinterval));
+        QStandardItem* wallthicknessNumberItem = new QStandardItem(QString::number(vecPrjs[i].dwallthickness));
+        QStandardItem* outerDiameterItem = new QStandardItem(QString::number(vecPrjs[i].outerDiameter));
         QStandardItem* createtimeItem = new QStandardItem(vecPrjs[i].createtime);
         QStandardItem* creatorNameItem = new QStandardItem(vecPrjs[i].creatorName);
         rowItems<<prjNameItem;
         rowItems<<discriptItem;
         rowItems<<wallthicknessItem;
         rowItems<<sampleintervalItem;
+        rowItems<<wallthicknessNumberItem;
+        rowItems<<outerDiameterItem;
         rowItems<<createtimeItem;
         rowItems<<creatorNameItem;
         prjTableModel->appendRow(rowItems);
@@ -1238,6 +1197,8 @@ void MainWindow::handleQryProjectByIdResult(projectDataModel &onePrj)
         CprjConfig->fileNameBytesMapByBox.append(fileNameBytesMap);
     }
     CprjConfig->dInterval = onePrj.sampleinterval;
+    CprjConfig->outerDiameter = onePrj.outerDiameter;
+    CprjConfig->dwallthickness = onePrj.dwallthickness;
     ui->prjNamelabel->setText("当前项目:"+onePrj.name);
     ui->openPrj->setEnabled(false);
     ui->closePrj->setEnabled(true);
@@ -1251,12 +1212,16 @@ void MainWindow::handleShowAddNewProject(projectDataModel &onePrj)
     QStandardItem* discriptItem = new QStandardItem(onePrj.discript);
     QStandardItem* wallthicknessItem = new QStandardItem(onePrj.wallthicknesstype);
     QStandardItem* sampleintervalItem = new QStandardItem(QString::number(onePrj.sampleinterval));
+    QStandardItem* wallthicknessNumberItem = new QStandardItem(QString::number(onePrj.dwallthickness));
+    QStandardItem* outerDiameterItem = new QStandardItem(QString::number(onePrj.outerDiameter));
     QStandardItem* createtimeItem = new QStandardItem(onePrj.createtime);
     QStandardItem* creatorNameItem = new QStandardItem(onePrj.creatorName);
     rowItems<<prjNameItem;
     rowItems<<discriptItem;
     rowItems<<wallthicknessItem;
     rowItems<<sampleintervalItem;
+    rowItems<<wallthicknessNumberItem;
+    rowItems<<outerDiameterItem;
     rowItems<<createtimeItem;
     rowItems<<creatorNameItem;
     prjTableModel->appendRow(rowItems);
@@ -1268,6 +1233,8 @@ void MainWindow::handleShowEditProject(int row, projectDataModel &onePrj)
     prjTableModel->item(row,1)->setText(onePrj.discript);
     prjTableModel->item(row,2)->setText(onePrj.wallthicknesstype);
     prjTableModel->item(row,3)->setText(QString::number(onePrj.sampleinterval));
+    prjTableModel->item(row,4)->setText(QString::number(onePrj.dwallthickness));
+    prjTableModel->item(row,5)->setText(QString::number(onePrj.outerDiameter));
 }
 
 void MainWindow::handleShowDeleteProject(int row)
@@ -1281,6 +1248,12 @@ void MainWindow::handleShowDetailProject(projectDataModel &onePrj)
     prjDetailDlg->setAttribute(Qt::WA_DeleteOnClose);
     prjDetailDlg->trans2detailDlg(onePrj);
     prjDetailDlg->exec();
+}
+
+void MainWindow::handleDetectDefectComplete()
+{
+    if(m_detectDefectingFlag)
+        m_detectDefectingFlag=false;
 }
 
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
@@ -1456,6 +1429,8 @@ void MainWindow::on_logout_triggered()
     CwindowDisp->windSensorType[0] = 1;
     CwindowDisp->windPlotType[0] = 1;
     CprjConfig->dInterval = 0;
+    CprjConfig->outerDiameter = 0.0;
+    CprjConfig->dwallthickness = 0.0;
     CprjConfig->dataDirPath = "";
     QVector<QString>().swap(CprjConfig->curFileNamevec);
     QVector<QString>().swap(CprjConfig->boxDirPath);
@@ -1575,6 +1550,8 @@ void MainWindow::on_closePrj_clicked()
     CwindowDisp->yUpper = 0;
     CwindowDisp->pageOffset = 1500;
     CprjConfig->dInterval = 0;
+    CprjConfig->outerDiameter = 0.0;
+    CprjConfig->dwallthickness = 0.0;
     CprjConfig->dataDirPath = "";
     QVector<QString>().swap(CprjConfig->curFileNamevec);
     QVector<QString>().swap(CprjConfig->boxDirPath);
@@ -1589,7 +1566,6 @@ void MainWindow::on_newPrj_clicked()
 {
     projectDlg* newPrjDlg = new projectDlg(this);
     newPrjDlg->setAttribute(Qt::WA_DeleteOnClose);
-    qRegisterMetaType<projectDataModel>("projectDataModel&");
     connect(newPrjDlg,&projectDlg::newProjectRequest,m_dbWorker,&databaseWorker::handleNewProjectRequest);
     newPrjDlg->trans2newDlg();
     newPrjDlg->setCurrentUser(*CcurrentUserMod);
@@ -1609,11 +1585,12 @@ void MainWindow::on_editPrj_clicked()
     QString prjDescribe = prjTableModel->item(row,1)->text();
     QString thicknessType = prjTableModel->item(row,2)->text();
     double dInterval = prjTableModel->item(row,3)->text().toDouble();
+    double dwallthickness = prjTableModel->item(row,4)->text().toDouble();
+    double douterDiameter = prjTableModel->item(row,5)->text().toDouble();
     projectDlg* prjEditDlg = new projectDlg(this);
     prjEditDlg->setAttribute(Qt::WA_DeleteOnClose);
-    qRegisterMetaType<projectDataModel>("projectDataModel&");
     connect(prjEditDlg,&projectDlg::editProjectRequest,m_dbWorker,&databaseWorker::handleEditProjectRequest);
-    prjEditDlg->trans2editDlg(projectId,prjName,prjDescribe,thicknessType,dInterval,"",row);
+    prjEditDlg->trans2editDlg(projectId,prjName,prjDescribe,thicknessType,dInterval,dwallthickness,douterDiameter,"",row);
     prjEditDlg->exec();
 }
 
@@ -1654,4 +1631,69 @@ void MainWindow::on_detailPrj_clicked()
     int row = selectedIndexes.first().row();
     int projectId = prjTableModel->item(row,0)->data(Qt::UserRole+1).toInt();
     emit queryProjectById(projectId,2);
+}
+
+void MainWindow::on_detectDefect_triggered()
+{
+    if(m_detectDefectingFlag)
+    {
+        qDebug()<<"当前进行缺陷分析的项目名："<<m_detectDefectingPrjName;
+        return;
+    }
+    else {
+        if(ui->openPrj->isEnabled())
+        {
+            msgBox::show("警告","未选择项目打开",2);
+            return;
+        }
+        //缺陷分析线程创立及触发操作
+        qDebug()<<"创建defectdetector所在线程为:"<<QThread::currentThreadId();
+        if(nullptr == m_defectdetectorWorker)
+        {
+            QThread* thread = new QThread;
+            m_defectdetectorWorker = new defectdetector;
+            m_defectdetectorWorker->moveToThread(thread);
+
+            //连接信号槽
+            connect(this,&MainWindow::startDetectDefects,m_defectdetectorWorker,&defectdetector::handleStartDetectDefects);
+            connect(m_defectdetectorWorker,&defectdetector::detectDefectComplete,this,&MainWindow::handleDetectDefectComplete);
+            thread->start();
+            //emit
+            emit startDetectDefects(CprjConfig->dInterval,CprjConfig->outerDiameter-2*CprjConfig->dwallthickness,*CprjConfig);
+        }
+        else {
+            //emit
+            emit startDetectDefects(CprjConfig->dInterval,CprjConfig->outerDiameter-2*CprjConfig->dwallthickness,*CprjConfig);
+        }
+
+
+        m_detectDefectingFlag = true;
+        int colonPos = ui->prjNamelabel->text().indexOf(":");
+        if(-1 != colonPos)
+        {
+            m_detectDefectingPrjName=ui->prjNamelabel->text().mid(colonPos+1);
+        }
+    }
+}
+
+void MainWindow::on_grayscaleSetSlider_valueChanged(int value)
+{
+    int currentValue = qRound(value/static_cast<double>(5))*5;
+    if(currentValue != m_grayScaleQsliderValue)
+    {
+        m_grayScaleQsliderValue = currentValue;
+        ui->grayscaleSetSlider->blockSignals(true);
+        ui->grayscaleSetSlider->setValue(m_grayScaleQsliderValue);
+        ui->grayscaleSetSlider->blockSignals(false);
+        qDebug()<<"滑动条近似数据："<<m_grayScaleQsliderValue;
+        if(!bupdateGrayScaleing)
+        {
+            bupdateGrayScaleing = true;
+            //emit
+            grayValueLower = static_cast<int>(127-m_grayScaleQsliderValue/100.0*127);
+            grayValueUpper = static_cast<int>(128+m_grayScaleQsliderValue/100.0*127);
+            qDebug()<<"灰度值下界为:"<<grayValueLower<<"---"<<"灰度值上界为:"<<grayValueUpper;
+            emit plotCacheDataRequestBybox(1);
+        }
+    }
 }

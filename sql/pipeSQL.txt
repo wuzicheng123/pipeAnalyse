@@ -38,6 +38,10 @@ create table project(
     INDEX idx_createtime(createtime),
     INDEX idx_creator(creator)
 )
+修改表
+alter table project
+    add column wallthicknessnumber DOUBLE COMMENT '壁厚数值',
+    add column outerDiameter DOUBLE COMMENT '外管径'
 
 --插入测试项目数据
 insert into project (name,discript,sampleinterval,wallthicknesstype,datapath,creator)

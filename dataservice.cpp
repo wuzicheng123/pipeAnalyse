@@ -369,9 +369,6 @@ void dataService::handleModelDataRequest(QString& qsfilePath, qint64 startPos, q
             }
             if(0 == startPos)
             {
-                //从当前文件头开始读取
-                m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[i];
-                qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
                 if(i == fileNumber)
                 {
                     m_dataModelVec.append(dataModelMap);
@@ -385,6 +382,11 @@ void dataService::handleModelDataRequest(QString& qsfilePath, qint64 startPos, q
                     else {
                         continue;
                     }
+                }
+                else {
+                    //从当前文件头开始读取
+                    m_exMainW->CprjConfig->curFileNamevec[k] = fileNameVec[i];
+                    qsfilePath = m_exMainW->CprjConfig->boxDirPath[k] + m_exMainW->CprjConfig->curFileNamevec[k];
                 }
             }
             //startPos < 0

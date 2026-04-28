@@ -38,7 +38,8 @@ SOURCES += \
     databaseworker.cpp \
     logindlg.cpp \
     newuserdlg.cpp \
-    projectdlg.cpp
+    projectdlg.cpp \
+    defectdetector.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -54,7 +55,8 @@ HEADERS += \
     databaseworker.h \
     logindlg.h \
     newuserdlg.h \
-    projectdlg.h
+    projectdlg.h \
+    defectdetector.h
 
 FORMS += \
         mainwindow.ui \

@@ -125,7 +125,7 @@ QHeaderView::section {
        <number>0</number>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="plotPage">
        <layout class="QGridLayout" name="gridLayout">
@@ -182,11 +182,42 @@ QHeaderView::section {
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>411</width>
+               <width>51</width>
                <height>13</height>
               </size>
              </property>
             </spacer>
+           </item>
+           <item>
+            <widget class="QSlider" name="grayscaleSetSlider">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>168</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="singleStep">
+              <number>5</number>
+             </property>
+             <property name="pageStep">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>100</number>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QPushButton" name="previousPageBtn">
@@ -548,6 +579,7 @@ QHeaderView::section {
      <string>设置</string>
     </property>
     <addaction name="windowNumSet"/>
+    <addaction name="detectDefect"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="loginManageMenu"/>
@@ -581,6 +613,11 @@ QHeaderView::section {
   <action name="windowNumSet">
    <property name="text">
     <string>窗口设置</string>
+   </property>
+  </action>
+  <action name="detectDefect">
+   <property name="text">
+    <string>缺陷分析</string>
    </property>
   </action>
  </widget>

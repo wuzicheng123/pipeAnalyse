@@ -123,3 +123,8 @@ quint16 getShortfromCharLittle(const unsigned char ucLow, const unsigned char uc
     sint |= ((ucHigh << 8) & 0xFF00); // 小端
     return sint;
 }
+
+bool isEqual(double a, double b, double epsilon)
+{
+    return std::fabs(a-b)<epsilon;
+}

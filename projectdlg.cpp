@@ -10,15 +10,19 @@ projectDlg::projectDlg(QWidget *parent) :
 {
     ui->setupUi(this);
     this->setWindowTitle("新建项目");
-    this->setFixedSize(579,234);
+    this->setFixedSize(579,283);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     ui->okButton->setEnabled(false);
     ui->tooltip_1->setStyleSheet("color:red");
     ui->tooltip_2->setStyleSheet("color:red");
     ui->tooltip_3->setStyleSheet("color:red");
     ui->tooltip_4->setStyleSheet("color:red");
+    ui->tooltip_5->setStyleSheet("color:red");
+    ui->tooltip_6->setStyleSheet("color:red");
     connect(ui->prjNameEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
     connect(ui->thicknessEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
+    connect(ui->thicknessNumberEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
+    connect(ui->outerDiameterEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
     connect(ui->intervalEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
     connect(ui->datapathEdit,&QLineEdit::textChanged,this,&projectDlg::handletextChanged);
     m_row = -1;
@@ -39,7 +43,7 @@ void projectDlg::setCurrentUser(userDataModel userData)
     m_userData = userData;
 }
 
-void projectDlg::trans2editDlg(int projectId, QString prjName, QString prjDiscribe, QString thicknessType, double sampleinterval, QString datapath,int row)
+void projectDlg::trans2editDlg(int projectId, QString prjName, QString prjDiscribe, QString thicknessType, double sampleinterval, double thicknessNumber, double outerDiameter, QString datapath,int row)
 {
     this->setWindowTitle("修改项目");
     m_prjId = projectId;
@@ -48,6 +52,8 @@ void projectDlg::trans2editDlg(int projectId, QString prjName, QString prjDiscri
     ui->discribeEdit->setText(prjDiscribe);
     ui->thicknessEdit->setText(thicknessType);
     ui->intervalEdit->setText(QString::number(sampleinterval));
+    ui->thicknessNumberEdit->setText(QString::number(thicknessNumber));
+    ui->outerDiameterEdit->setText(QString::number(outerDiameter));
     ui->datapathEdit->setText(datapath);
 }
 
@@ -58,11 +64,15 @@ void projectDlg::trans2detailDlg(projectDataModel &oneDatamodel)
     ui->discribeEdit->setText(oneDatamodel.discript);
     ui->thicknessEdit->setText(oneDatamodel.wallthicknesstype);
     ui->intervalEdit->setText(QString::number(oneDatamodel.sampleinterval));
+    ui->thicknessNumberEdit->setText(QString::number(oneDatamodel.dwallthickness));
+    ui->outerDiameterEdit->setText(QString::number(oneDatamodel.outerDiameter));
     ui->datapathEdit->setText(oneDatamodel.datapath);
     ui->prjNameEdit->setReadOnly(true);
     ui->discribeEdit->setReadOnly(true);
     ui->thicknessEdit->setReadOnly(true);
     ui->intervalEdit->setReadOnly(true);
+    ui->thicknessNumberEdit->setReadOnly(true);
+    ui->outerDiameterEdit->setReadOnly(true);
     ui->datapathEdit->setReadOnly(true);
     ui->datapathButton->setEnabled(false);
     ui->okButton->setEnabled(false);
@@ -75,6 +85,8 @@ void projectDlg::handletextChanged()
     bool thicknessValid = (ui->thicknessEdit->text().size() != 0);
     bool intervalValid = (ui->intervalEdit->text().size() != 0);
     bool datapathValid = (ui->datapathEdit->text().size() != 0);
+    bool thicknessNumberValid = (ui->thicknessNumberEdit->text().size() != 0);
+    bool outerDiameterValid = (ui->outerDiameterEdit->text().size() != 0);
     QString sampleInterval = ui->intervalEdit->text();
     bool ok;
     double value = sampleInterval.toDouble(&ok);
@@ -105,6 +117,36 @@ void projectDlg::handletextChanged()
             ui->tooltip_4->setText("非大于0的数值");
         }
     }
+    sampleInterval = ui->thicknessNumberEdit->text();
+    value = sampleInterval.toDouble(&ok);
+    if(!thicknessNumberValid)
+    {
+        ui->tooltip_5->setText("是必须的！");
+    }
+    else {
+        if(ok && value>0)//验证数字合法性
+        {
+            ui->tooltip_5->setText("");
+        }
+        else{
+            ui->tooltip_5->setText("非大于0的数值");
+        }
+    }
+    sampleInterval = ui->outerDiameterEdit->text();
+    value = sampleInterval.toDouble(&ok);
+    if(!outerDiameterValid)
+    {
+        ui->tooltip_6->setText("是必须的！");
+    }
+    else {
+        if(ok && value>0)//验证数字合法性
+        {
+            ui->tooltip_6->setText("");
+        }
+        else{
+            ui->tooltip_6->setText("非大于0的数值");
+        }
+    }
     if(!datapathValid)
     {
         ui->tooltip_3->setText("是必须的！");
@@ -112,7 +154,10 @@ void projectDlg::handletextChanged()
     else {
         ui->tooltip_3->setText("");
     }
-    if(nameeditValid && thicknessValid && ok && value>0 && datapathValid)
+    if(nameeditValid && thicknessValid && datapathValid &&
+            ui->tooltip_4->text() == "" &&
+            ui->tooltip_5->text() == "" &&
+            ui->tooltip_6->text() == "")
     {
         ui->okButton->setEnabled(true);
     }
@@ -128,6 +173,8 @@ void projectDlg::on_okButton_clicked()
     oneProjectData.discript = ui->discribeEdit->text();
     oneProjectData.wallthicknesstype = ui->thicknessEdit->text();
     oneProjectData.sampleinterval = ui->intervalEdit->text().toDouble();
+    oneProjectData.dwallthickness = ui->thicknessNumberEdit->text().toDouble();
+    oneProjectData.outerDiameter = ui->outerDiameterEdit->text().toDouble();
     oneProjectData.datapath = ui->datapathEdit->text();
     //确保datapath末尾有符号'\'
     if((!oneProjectData.datapath.isEmpty() && !oneProjectData.datapath.endsWith('\\')) ||
