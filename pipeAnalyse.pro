@@ -39,7 +39,8 @@ SOURCES += \
     logindlg.cpp \
     newuserdlg.cpp \
     projectdlg.cpp \
-    defectdetector.cpp
+    defectdetector.cpp \
+    json_utils.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -56,7 +57,8 @@ HEADERS += \
     logindlg.h \
     newuserdlg.h \
     projectdlg.h \
-    defectdetector.h
+    defectdetector.h \
+    json_utils.h
 
 FORMS += \
         mainwindow.ui \

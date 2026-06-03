@@ -580,6 +580,7 @@ QHeaderView::section {
     </property>
     <addaction name="windowNumSet"/>
     <addaction name="detectDefect"/>
+    <addaction name="showDefect"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="loginManageMenu"/>
@@ -618,6 +619,17 @@ QHeaderView::section {
   <action name="detectDefect">
    <property name="text">
     <string>缺陷分析</string>
+   </property>
+  </action>
+  <action name="showDefect">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>显示缺陷</string>
    </property>
   </action>
  </widget>

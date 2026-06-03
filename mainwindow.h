@@ -151,6 +151,8 @@ private slots:
 
     void on_grayscaleSetSlider_valueChanged(int value);
 
+    void on_showDefect_triggered(bool checked);
+
 public slots:
     void handleSig_wheelEvent(qint64 xLower,qint64 xUpper,qint64 yLower,qint64 yUpper);
 

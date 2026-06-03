@@ -2,6 +2,7 @@
 #include <QDebug>
 #include "commonfun.h"
 #include "plotprocess.h"
+#include "json_utils.h"
 
 defectdetector::defectdetector(QObject *parent) : QObject(parent)
 {
@@ -277,6 +278,55 @@ DefectType defectdetector::classifyEvent(const DefectEvent &event, double pitch_
     return OrdinaryLoss;
 }
 
+void defectdetector::sortAndMergeCandidates(DefectEvent &event)
+{
+    //1.按通道号排序
+    std::sort(event.candidates.begin(),event.candidates.end(),
+              [](const DefectCandidate& a,const DefectCandidate& b){
+        return a.channel < b.channel;
+    });
+    //2.合并相同通道的候选
+    QVector<DefectCandidate>merged;
+    for(const auto& cand:event.candidates){
+        if(merged.isEmpty() || merged.last().channel != cand.channel){
+            merged.append(cand);
+        }else {
+            DefectCandidate& last = merged.last();
+            last.start_mm = qMin(last.start_mm,cand.start_mm);
+            last.end_mm = qMax(last.end_mm,cand.end_mm);
+            last.peakToPeak = qMax(last.peakToPeak,cand.peakToPeak);
+        }
+    }
+    event.candidates=merged;
+}
+
+QVector<QPointF> defectdetector::buildPolygonFromDefectEvent(const DefectEvent &event)
+{
+    QVector<QPointF> vertices;
+    int iSize = event.candidates.size();
+    if(iSize>0)
+    {
+        // 1.逆时针存储, 左边界
+        for(int i=iSize-1;i>=0;i--)
+        {
+            const DefectCandidate& cand = event.candidates[i];
+            vertices.append(QPointF(cand.start_mm,cand.channel));
+        }
+        // 2.右边界
+        for(int i=0;i<iSize-1;i++)
+        {
+            const DefectCandidate& cand = event.candidates[i];
+            vertices.append(QPointF(cand.end_mm,cand.channel));
+        }
+    }
+    //手动闭合多边形
+    if(!vertices.isEmpty())
+    {
+        vertices.append(vertices.first());
+    }
+    return vertices;
+}
+
 void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, projectConfigure *CprjConfig)
 {
     //多读少取，例如读8000帧数据，取位于前4000帧位置的数据；再读2000-10000位置，取4000-8000位置；再读6000-14000，取8000-12000；以此类推
@@ -290,6 +340,8 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
     QVector<DefectCandidate>blockCands;
     QVector<DefectEvent> resultBlockEvents;
     double pitch_mm = 0.0;
+    //已存在缺陷表删除
+    //新建缺陷表
     while(true)
     {
         readBlockData(qsfilePath,startPos,offset,CprjConfig);
@@ -314,16 +366,15 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
             {
                 if(0 == startPos)
                 {
-                    if(xCenter>=0 && xCenter<xCenter4000)
+                    if(xCenter>=0 && xCenter<xCenter4000 && event.minChannel!=event.maxChannel)
                         resultBlockEvents.append(event);
                 }
                 else {
-                    if(xCenter>=xCenterLow && xCenter<xCenterHigh)
+                    if(xCenter>=xCenterLow && xCenter<xCenterHigh && event.minChannel!=event.maxChannel)
                         resultBlockEvents.append(event);
                 }
             }
         }
-        //存数据库
         //打印验证
         //若resultBlockEvents>1000存库，清除resultBlockEvents；下次循环如是操作
         if(resultBlockEvents.size()>1000)
@@ -338,6 +389,13 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
                 case Patch:        typeStr = "补板"; break;
                 case GirthWeld:    typeStr = "环焊缝"; break;
                 }
+                //1.计算缺陷点集
+                //2.缺陷点集转字符串
+                //3.存数据库
+                sortAndMergeCandidates(ev);
+                QVector<QPointF>vertices = buildPolygonFromDefectEvent(ev);
+                QString defectString = buildJsonFromVertices(vertices);
+
                 qDebug() << "缺陷事件: 通道" << ev.minChannel << "-" << ev.maxChannel
                          << ", 轴向" << ev.axialStart_mm << "~" << ev.axialEnd_mm << "mm"
                          << ", 类型:" << typeStr;
@@ -575,5 +633,25 @@ int defectdetector::readBlockData(QString &qsfilePath, qint64 startPos, qint64 o
 void defectdetector::handleStartDetectDefects(double a_mm, double innerDiameter, projectConfigure CprjConfig)
 {
     qDebug()<<"defectdetector实际工作线程为:"<<QThread::currentThreadId();
+    QElapsedTimer qElapTimer;
+    qElapTimer.start();
     detectDefectsFromBlocks(a_mm,innerDiameter,&CprjConfig);
+    qDebug()<<"漏磁分析算法花费时间:"<<qElapTimer.elapsed()<<"ms";
+}
+
+QString buildJsonFromVertices(QVector<QPointF> &vertices)
+{
+    QVariantList objectList = {};
+    for(int i=0;i<vertices.size();i++)
+    {
+        QVariantMap pointMap;
+        pointMap["x"] = vertices[i].x();
+        pointMap["y"] = vertices[i].y();
+        objectList.append(pointMap);
+    }
+    QVariantMap root;
+    root["vertices"] = objectList;
+    bool ok;
+    QString jsonString = buildJson(root,true,&ok);
+    return jsonString;
 }

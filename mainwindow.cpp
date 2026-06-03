@@ -1697,3 +1697,20 @@ void MainWindow::on_grayscaleSetSlider_valueChanged(int value)
         }
     }
 }
+
+void MainWindow::on_showDefect_triggered(bool checked)
+{
+    if(ui->openPrj->isEnabled())
+    {
+        msgBox::show("警告","未选择项目打开",2);
+        ui->showDefect->setChecked(false);
+        return;
+    }
+    if(checked && !m_detectDefectingFlag)
+    {
+
+    }
+    else {
+        qDebug()<<"关闭显示缺陷";
+    }
+}

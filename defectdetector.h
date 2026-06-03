@@ -52,6 +52,15 @@ public:
      */
     DefectType classifyEvent(const DefectEvent& event, double pitch_mm);
     /**
+     * 将DefectEvent 中的 candidates 按通道号升序排列
+     * 同一通道存在多个DefectCandidate，将其合并为一个
+     */
+    void sortAndMergeCandidates(DefectEvent& event);
+    /**
+     * 将缺陷格式从每个通道的缺陷区间转换为多边形顶点格式
+     */
+    QVector<QPointF> buildPolygonFromDefectEvent(const DefectEvent &event);
+    /**
      * 从文件中逐块读取数据并处理（模拟）
      * @param a_mm          采样间隔（毫米）
      * @param innerDiameter      内管径（毫米）
@@ -81,5 +90,10 @@ private:
     // 轴向距离阈值（毫米），用于判断两个候选是否属于同一缺陷，小于5厘米
     const double AXIAL_GAP_MM = 50.0;
 };
+
+/**
+ * 将缺陷区域的点集数组转换为Json字符串
+ */
+QString buildJsonFromVertices(QVector<QPointF>& vertices);
 
 #endif // DEFECTDETECTOR_H
