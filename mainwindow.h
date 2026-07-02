@@ -52,7 +52,7 @@ public:
     void setMutiWindow(int Num);
     //设置图表标题
     void setCPtittle(MyCustomPlot*& plotboard, QString strTitle);
-    //初始化数据库及数据库后台线程
+    //初始化数据库及数据库后台线程、缺陷分析线程创立
     void initialDatabase();
     //清图函数，传入画板参数
     void clearPlotboard(MyCustomPlot*& plotBoard);
@@ -61,6 +61,9 @@ public:
     //openCV
     //openCV功能测试函数
     void testOpenCV();
+    //将QVector<QPointF>转换为QPolygonF
+    QPolygonF parsePointSet(QVector<QPointF>&vecPoints);
+    void drawDefectEvent(MyCustomPlot* plot, DefectEvent &event, QHash<QString, QCPGraph*>& graphMap);
 
     //窗口控件
     //多窗体窗口控件(窗体1在ui中)  //QcpText//窗体1
@@ -75,6 +78,7 @@ public:
     bool m_plotting;//false未进行中，true绘制中
     //缺陷分析是否正在进行标志
     bool m_detectDefectingFlag;//false未进行中，true进行分析中
+    bool m_showDefects;//false不显示缺陷,true显示缺陷
     QString m_detectDefectingPrjName;//当前正在缺陷分析的项目名
     int m_grayScaleQsliderValue;//当前显示灰度图的灰度范围参数
     bool bupdateGrayScaleing;//当前是否在修改算法执行中
@@ -94,6 +98,7 @@ signals:
     void queryProjectById(int id,int type);
     void deleteProjectRequest(int row,int projectId);
     void startDetectDefects(double a_mm, double innerDiameter,projectConfigure CprjConfig);
+    void queryDefectsInAxial(int openPrjId,double x_start,double x_end,double y_start,double y_end);
 
 private slots:
     int handlePlotDataReadyBybox(QVector<QMap<int,QVector<QVector<QCPGraphData>>>> &qmCPDatavec, int updateType);
@@ -110,6 +115,7 @@ private slots:
     void handleShowDeleteProject(int row);
     void handleShowDetailProject(projectDataModel& onePrj);
     void handleDetectDefectComplete();
+    void handleShowDefectsInAxial(QVector<DefectEvent>vecDefects,int openPrjId);
     //原有触发逻辑都不变，只有在读的时候多个盒子一起读，在转换的时候多个盒子一起转换
     void on_plotWindow_triggered();
 
@@ -163,6 +169,12 @@ private:
     //灰度值设置范围上下限，用于灰度图像显示
     int grayValueLower;
     int grayValueUpper;
+    int m_openPrjId;
+    //缺陷边框graph管理(对应多窗体的四个窗口)
+    QHash<QString,QCPGraph*>m_graphMap1;
+    QHash<QString,QCPGraph*>m_graphMap2;
+    QHash<QString,QCPGraph*>m_graphMap3;
+    QHash<QString,QCPGraph*>m_graphMap4;
 
 public:
     projectConfigure *CprjConfig = nullptr;

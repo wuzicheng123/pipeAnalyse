@@ -47,3 +47,20 @@ alter table project
 insert into project (name,discript,sampleinterval,wallthicknesstype,datapath,creator)
 values('121test','测试数据项目',3,'20','D:\\Soft\\管道漏磁内检测软件\\data\\测试数据\\测试数据12.10\\104\\',1);
 
+新建缺陷表
+create table defects(
+    defect_id VARCHAR(36) COMMENT '缺陷Id',
+        axial_start DOUBLE COMMENT '轴向起始',
+        axial_end DOUBLE COMMENT '轴向结束',
+        min_channel INT COMMENT '通道起始',
+        max_channel INT COMMENT '通道结束',
+        defect_type VARCHAR(20) COMMENT '缺陷类型',
+        axial_middle DOUBLE COMMENT '轴向中点',
+        point_set LONGTEXT NOT NULL COMMENT '点集',
+        PRIMARY KEY(defect_id),
+        INDEX idx_axial_range(axial_start,axial_end),
+    INDEX idx_channel_range(min_channel,max_channel),
+        INDEX idx_axial_middle(axial_middle),
+    INDEX idx_defect_type(defect_type)
+)
+

@@ -7,6 +7,7 @@
 defectdetector::defectdetector(QObject *parent) : QObject(parent)
 {
     m_numChannels = 0;
+    m_curProjectID = -1;
 }
 
 QVector<DefectCandidate> defectdetector::processChannelBlock(int channel, const QVector<dataPoint> &blockData, double a_mm, qint64 blockStartIdx, double noiseThresh, double minPeakToPeak, int minDistPoints)
@@ -340,6 +341,7 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
     QVector<DefectCandidate>blockCands;
     QVector<DefectEvent> resultBlockEvents;
     double pitch_mm = 0.0;
+    bool bfirst = true; //是否为分析中的首次循环,只有bfirst为true时才删表建表，其他时候只添加数据
     //已存在缺陷表删除
     //新建缺陷表
     while(true)
@@ -390,16 +392,24 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
                 case GirthWeld:    typeStr = "环焊缝"; break;
                 }
                 //1.计算缺陷点集
-                //2.缺陷点集转字符串
-                //3.存数据库
+                //2.缺陷点集转字符串，添加UUID
                 sortAndMergeCandidates(ev);
                 QVector<QPointF>vertices = buildPolygonFromDefectEvent(ev);
                 QString defectString = buildJsonFromVertices(vertices);
+                ev.uuid = generateUuidId();
+                ev.typeStr = typeStr;
+                ev.defectStr = defectString;
 
                 qDebug() << "缺陷事件: 通道" << ev.minChannel << "-" << ev.maxChannel
                          << ", 轴向" << ev.axialStart_mm << "~" << ev.axialEnd_mm << "mm"
                          << ", 类型:" << typeStr;
+                qDebug()<<"缺陷点集:"<<defectString;
+                qDebug()<<"缺陷的唯一标识:"<<ev.uuid;
             }
+            //3.存数据库
+            emit addNewDefects(resultBlockEvents,m_curProjectID,bfirst);
+            if(bfirst)
+                bfirst = false;
             QVector<DefectEvent>().swap(resultBlockEvents);
         }
 
@@ -425,10 +435,25 @@ void defectdetector::detectDefectsFromBlocks(double a_mm, double innerDiameter, 
             case Patch:        typeStr = "补板"; break;
             case GirthWeld:    typeStr = "环焊缝"; break;
             }
+            //1.计算缺陷点集
+            //2.缺陷点集转字符串
+            sortAndMergeCandidates(ev);
+            QVector<QPointF>vertices = buildPolygonFromDefectEvent(ev);
+            QString defectString = buildJsonFromVertices(vertices);
+            ev.uuid = generateUuidId();
+            ev.typeStr = typeStr;
+            ev.defectStr = defectString;
+
             qDebug() << "缺陷事件: 通道" << ev.minChannel << "-" << ev.maxChannel
                      << ", 轴向" << ev.axialStart_mm << "~" << ev.axialEnd_mm << "mm"
                      << ", 类型:" << typeStr;
+            qDebug()<<"缺陷点集:"<<defectString;
+            qDebug()<<"缺陷的唯一标识:"<<ev.uuid;
         }
+        //3.存数据库
+        emit addNewDefects(resultBlockEvents,m_curProjectID,bfirst);
+        if(bfirst)
+            bfirst = false;
         QVector<DefectEvent>().swap(resultBlockEvents);
     }
     //缺陷分析结束通知窗口主线程
@@ -630,6 +655,11 @@ int defectdetector::readBlockData(QString &qsfilePath, qint64 startPos, qint64 o
     return 0;
 }
 
+void defectdetector::setProjectId(int Id)
+{
+    m_curProjectID = Id;
+}
+
 void defectdetector::handleStartDetectDefects(double a_mm, double innerDiameter, projectConfigure CprjConfig)
 {
     qDebug()<<"defectdetector实际工作线程为:"<<QThread::currentThreadId();
@@ -654,4 +684,36 @@ QString buildJsonFromVertices(QVector<QPointF> &vertices)
     bool ok;
     QString jsonString = buildJson(root,true,&ok);
     return jsonString;
+}
+
+QString generateUuidId()
+{
+    QUuid uuid = QUuid::createUuid();
+//    QString id = uuid.toString(QUuid::WithoutBraces); // 格式: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    // 若要去除连字符：
+    QString id = uuid.toString(QUuid::WithoutBraces).remove('-');
+    return id;
+}
+
+QVector<QPointF> parseVerticesFromJson(QString& jsonStr)
+{
+    bool ok;
+    QVariant rootVar = parseJson(jsonStr,&ok);
+    QVariantMap root = toMap(rootVar);
+    if(root.isEmpty())
+        return QVector<QPointF>();
+    QVariantList objectList = toList(root["vertices"]);
+    if(objectList.isEmpty())
+        return QVector<QPointF>();
+    QVector<QPointF>retVec;
+    for(int i=0;i<objectList.size();i++)
+    {
+        QVariant oneVar = objectList[i];
+        QVariantMap oneMap = toMap(oneVar);
+        QPointF onePoint;
+        onePoint.setX(toDouble(oneMap["x"],&ok));
+        onePoint.setY(toDouble(oneMap["y"],&ok));
+        retVec.append(onePoint);
+    }
+    return  retVec;
 }

@@ -2,6 +2,7 @@
 #define DEFECTDETECTOR_H
 
 #include <QObject>
+#include <QUuid>
 #include "define.h"
 
 class defectdetector : public QObject
@@ -75,6 +76,7 @@ public:
     //Axis 为XYZ或涡流参数 X-1
     int readDataFromFile(QString qsfilePath, QVector<QVector<dataPoint> > &vecPoint2D, qint64 startPos, qint64 offset, qint64 &differ, int axis);
     int readBlockData(QString& qsfilePath,qint64 startPos,qint64 offset,projectConfigure* CprjConfig);
+    void setProjectId(int Id);
 
     //成员变量
     QVector<QVector<dataPoint>> m_vecPoint2D;
@@ -82,6 +84,7 @@ public:
 
 signals:
     void detectDefectComplete();
+    void addNewDefects(QVector<DefectEvent> resultBlockEvents,int currentPrjId,bool bfirst);
 
 public slots:
     void handleStartDetectDefects(double a_mm, double innerDiameter, projectConfigure CprjConfig);
@@ -89,11 +92,14 @@ public slots:
 private:
     // 轴向距离阈值（毫米），用于判断两个候选是否属于同一缺陷，小于5厘米
     const double AXIAL_GAP_MM = 50.0;
+    int m_curProjectID;
 };
 
 /**
  * 将缺陷区域的点集数组转换为Json字符串
  */
 QString buildJsonFromVertices(QVector<QPointF>& vertices);
+QVector<QPointF> parseVerticesFromJson(QString &jsonStr);
+QString generateUuidId();
 
 #endif // DEFECTDETECTOR_H

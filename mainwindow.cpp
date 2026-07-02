@@ -39,6 +39,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //初始化代码
     ui->QcpText_1->setInteractions(QCP::iRangeZoom);
+    ui->QcpText_1->xAxis->grid()->setVisible(false);
+    ui->QcpText_1->yAxis->grid()->setVisible(false);
     connect(ui->QcpText_1,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
     //初始部分禁用菜单栏
     ui->projectManage->setEnabled(false);
@@ -99,7 +101,9 @@ MainWindow::MainWindow(QWidget *parent) :
     m_defectdetectorWorker = nullptr;
     m_plotting = false;
     m_detectDefectingFlag = false;
+    m_showDefects = false;
     m_detectDefectingPrjName = "";
+    m_openPrjId = -1;
 }
 
 MainWindow::~MainWindow()
@@ -447,8 +451,16 @@ void MainWindow::plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData> > 
 //    最后一个盒子时，转换为cv::Mat，并放入plotBoard中
     if(boxNum == boxSize-1)
     {
-        //清除曲线图
-        plotBoard->clearPlottables();
+        //清除曲线图（非缺陷框）
+        for(int k=plotBoard->graphCount()-1;k>=0;k--)
+        {
+            QCPGraph *graph = plotBoard->graph(k);
+            if(graph->objectName().size() != 34)
+            {
+                plotBoard->removeGraph(k);
+            }
+        }
+//        plotBoard->clearPlottables();
         //若存在灰度图像，清除灰度图像
         removePixmapItem(plotBoard);
 
@@ -629,6 +641,7 @@ void MainWindow::plotGrayOrColorChartDataByAxis(QVector<QVector<QCPGraphData> > 
         pixmapItem->bottomRight->setType(QCPItemPosition::ptAxisRectRatio);
         pixmapItem->topLeft->setCoords(0,topleftScaleY);
         pixmapItem->bottomRight->setCoords(1,bottomrightScaleY);
+        pixmapItem->setLayer("background");
         plotBoard->replot();
     }
 }
@@ -642,18 +655,21 @@ void MainWindow::setMutiWindow(int Num)
             if(nullptr != QcpText_2)
             {
                 disconnect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap2);
                 delete QcpText_2;
                 QcpText_2 = nullptr;
             }
             if(nullptr != QcpText_3)
             {
                 disconnect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap3);
                 delete QcpText_3;
                 QcpText_3 = nullptr;
             }
             if(nullptr != QcpText_4)
             {
                 disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap4);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -665,12 +681,14 @@ void MainWindow::setMutiWindow(int Num)
             if(nullptr != QcpText_3)
             {
                 disconnect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap3);
                 delete QcpText_3;
                 QcpText_3 = nullptr;
             }
             if(nullptr != QcpText_4)
             {
                 disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap4);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -681,6 +699,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
                 QcpText_2->setInteractions(QCP::iRangeZoom);
+                QcpText_2->xAxis->grid()->setVisible(false);
+                QcpText_2->yAxis->grid()->setVisible(false);
                 connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -694,6 +714,7 @@ void MainWindow::setMutiWindow(int Num)
             if(nullptr != QcpText_4)
             {
                 disconnect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
+                QHash<QString,QCPGraph*>().swap(m_graphMap4);
                 delete QcpText_4;
                 QcpText_4 = nullptr;
             }
@@ -704,6 +725,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,2,0,1,1);
                 QcpText_2->setInteractions(QCP::iRangeZoom);
+                QcpText_2->xAxis->grid()->setVisible(false);
+                QcpText_2->yAxis->grid()->setVisible(false);
                 connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -716,6 +739,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_3->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_3,3,0,1,1);
                 QcpText_3->setInteractions(QCP::iRangeZoom);
+                QcpText_3->xAxis->grid()->setVisible(false);
+                QcpText_3->yAxis->grid()->setVisible(false);
                 connect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -733,6 +758,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_2->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_2,1,1,1,1);
                 QcpText_2->setInteractions(QCP::iRangeZoom);
+                QcpText_2->xAxis->grid()->setVisible(false);
+                QcpText_2->yAxis->grid()->setVisible(false);
                 connect(QcpText_2,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -745,6 +772,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_3->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_3,2,0,1,1);
                 QcpText_3->setInteractions(QCP::iRangeZoom);
+                QcpText_3->xAxis->grid()->setVisible(false);
+                QcpText_3->yAxis->grid()->setVisible(false);
                 connect(QcpText_3,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -757,6 +786,8 @@ void MainWindow::setMutiWindow(int Num)
                 QcpText_4->setEnabled(true);
                 ui->gridLayout->addWidget(QcpText_4,2,1,1,1);
                 QcpText_4->setInteractions(QCP::iRangeZoom);
+                QcpText_4->xAxis->grid()->setVisible(false);
+                QcpText_4->yAxis->grid()->setVisible(false);
                 connect(QcpText_4,&MyCustomPlot::sig_wheelEvent,this,&MainWindow::handleSig_wheelEvent);
             }
             else {
@@ -844,6 +875,23 @@ void MainWindow::initialDatabase()
         connect(this,&MainWindow::deleteProjectRequest,m_dbWorker,&databaseWorker::handleDeleteProjectRequest);
         connect(m_dbWorker,&databaseWorker::showDeleteProject,this,&MainWindow::handleShowDeleteProject);
         connect(m_dbWorker,&databaseWorker::showDetailProject,this,&MainWindow::handleShowDetailProject);
+        connect(this,&MainWindow::queryDefectsInAxial,m_dbWorker,&databaseWorker::handleQueryDefectsInAxial);
+        qRegisterMetaType<QVector<DefectEvent>>("(QVector<DefectEvent>");
+        connect(m_dbWorker,&databaseWorker::showDefectsInAxial,this,&MainWindow::handleShowDefectsInAxial);
+        thread->start();
+    }
+    if(nullptr == m_defectdetectorWorker)
+    {
+        qDebug()<<"创建defectdetector所在线程为:"<<QThread::currentThreadId();
+        QThread* thread = new QThread;
+        m_defectdetectorWorker = new defectdetector;
+        m_defectdetectorWorker->moveToThread(thread);
+
+        //连接信号槽
+        qRegisterMetaType<QVector<DefectEvent>>("QVector<DefectEvent>");
+        connect(this,&MainWindow::startDetectDefects,m_defectdetectorWorker,&defectdetector::handleStartDetectDefects);
+        connect(m_defectdetectorWorker,&defectdetector::detectDefectComplete,this,&MainWindow::handleDetectDefectComplete);
+        connect(m_defectdetectorWorker,&defectdetector::addNewDefects,m_dbWorker,&databaseWorker::handleAddNewdefects);
         thread->start();
     }
 }
@@ -934,8 +982,112 @@ void MainWindow::testOpenCV()
     qDebug() << "\n=== 测试通过！ ===";
 }
 
+QPolygonF MainWindow::parsePointSet(QVector<QPointF> &vecPoints)
+{
+    QPolygonF polygon;
+    if (vecPoints.isEmpty()) {
+        qDebug() << "Empty point set";
+        return polygon;
+    }
+    for(const QPointF& ptF:vecPoints)
+    {
+        polygon<<ptF;
+    }
+    return polygon;
+}
+
+void MainWindow::drawDefectEvent(MyCustomPlot *plot, DefectEvent &event, QHash<QString, QCPGraph*>& graphMap)
+{
+    // 1. 解析点集
+    QString objectName1 = event.uuid+"_1",objectName2 = event.uuid+"_2";
+    if(graphMap.contains(objectName1) && graphMap.contains(objectName2))
+    {
+        QCPGraph* graph = graphMap.value(objectName1);
+        graph->setVisible(true);
+        QCPGraph* graph1 = graphMap.value(objectName2);
+        graph1->setVisible(true);
+    }
+    else {
+        QVector<QPointF>vecPtfs = parseVerticesFromJson(event.defectStr);
+        QPolygonF polygon = parsePointSet(vecPtfs);
+        if (polygon.isEmpty()) {
+            qDebug() << "No valid polygon for event";
+            return;
+        }
+        //创建一个新的graph用于绘制多边形,由于QCustomplot机制只能画折线，所以由两条线段构成闭合曲面
+        QCPGraph* polygonGraph1 = plot->addGraph();
+        polygonGraph1->setPen(QPen(Qt::red, 2));
+        polygonGraph1->setObjectName(event.uuid+"_1");
+        polygonGraph1->setLineStyle(QCPGraph::lsLine); // 确保直线连接
+        //将顶点拆分为x和y的QVector
+        QVector<QCPGraphData> vecData;
+        for (const QPointF &point : polygon) {
+            QCPGraphData data;
+            data.key = point.x();
+            data.value = point.y();
+            vecData.append(data);
+        }
+        vecData.removeLast();
+        // 4. 设置数据
+        QSharedPointer<QCPGraphDataContainer>dataContainer = polygonGraph1->data();
+        dataContainer->clear();
+        dataContainer->set(vecData,true);
+        graphMap.insert(objectName1,polygonGraph1);
+
+        QVector<QCPGraphData> vecData1;
+        if(polygon.size()>3)
+        {
+            QCPGraphData data,data1;
+            int iSize = polygon.size();
+            data.key = polygon.first().x();
+            data.value = polygon.first().y();
+            vecData1.append(data);
+            data1.key = polygon.at(iSize-2).x();
+            data1.value = polygon.at(iSize-2).y();
+            vecData1.append(data1);
+            QCPGraph* polygonGraph2 = plot->addGraph();
+            polygonGraph2->setPen(QPen(Qt::red, 2));
+            polygonGraph2->setObjectName(event.uuid+"_2");
+            polygonGraph2->setLineStyle(QCPGraph::lsLine); // 确保直线连接
+            QSharedPointer<QCPGraphDataContainer>dataContainer2 = polygonGraph2->data();
+            dataContainer2->clear();
+            dataContainer2->set(vecData1,true);
+            graphMap.insert(objectName2,polygonGraph2);
+        }
+        // 5. 关键步骤：启用填充，并设置填充基线为图形自身（形成闭环）
+        //最后一个缺陷的时候replot
+    }
+}
+
 int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGraphData> > > > &qmCPDatavec,int updateType)
 {
+    QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
+    vecMyCP.append(ui->QcpText_1);
+    vecMyCP.append(QcpText_2);
+    vecMyCP.append(QcpText_3);
+    vecMyCP.append(QcpText_4);
+    QVector<QHash<QString,QCPGraph*>*>vecHashMap;
+    vecHashMap.append(&m_graphMap1);
+    vecHashMap.append(&m_graphMap2);
+    vecHashMap.append(&m_graphMap3);
+    vecHashMap.append(&m_graphMap4);
+
+    if(m_graphMap1.size()>100)
+    {
+        for(int i=0;i<CwindowDisp->windNum;i++)
+        {
+            for(int k=vecMyCP[i]->graphCount()-1;k>=0;k--)
+            {
+                QCPGraph *graph = vecMyCP[i]->graph(k);
+                if(graph->objectName().size() == 34)
+                {
+                    vecMyCP[i]->removeGraph(k);
+                }
+            }
+            QHash<QString,QCPGraph*>().swap(*vecHashMap[i]);
+        }
+    }
+
     dataService::getInstance()->m_dataRwLock.lockForRead();
     QElapsedTimer qElapTimer;
     qElapTimer.start();
@@ -954,12 +1106,8 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
                 }
             }
         }
-        //绘制磁力曲线
-        QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
-        vecMyCP.append(ui->QcpText_1);
-        vecMyCP.append(QcpText_2);
-        vecMyCP.append(QcpText_3);
-        vecMyCP.append(QcpText_4);
+//        //绘制磁力曲线
+
         //灰度图所用参数
         //0-代表X，1-Y。。。3代表Vortex（存储灰度图像处理数据）
         QVector<QVector<double>>doubleArray(4);
@@ -986,9 +1134,51 @@ int MainWindow::handlePlotDataReadyBybox(QVector<QMap<int, QVector<QVector<QCPGr
     }
     qDebug()<<"绘制图像所花费时间:"<<qElapTimer.elapsed()<<"ms";
     dataService::getInstance()->m_dataRwLock.unlock();
+
+    if(!qmCPDatavec.isEmpty())
+    {
+        //1.查询数据库缺陷表，获取显示范围内数据
+        //emit 数据请求
+        if(m_showDefects)
+        {
+            emit queryDefectsInAxial(m_openPrjId,ui->QcpText_1->xAxis->range().lower,ui->QcpText_1->xAxis->range().upper,
+                                     ui->QcpText_1->yAxis->range().lower,ui->QcpText_1->yAxis->range().upper);
+        }
+        //清除图上缺陷红色框
+        else {
+            qElapTimer.start();
+            for(int i=0;i<CwindowDisp->windNum;i++)
+            {
+//                //倒序删除
+//                for(int k=vecMyCP[i]->graphCount()-1;k>=0;--k)
+//                {
+//                    QCPGraph* graph = vecMyCP[i]->graph(k);
+//                    if(graph->objectName().size() == 34)
+//                    {
+//                        vecMyCP[i]->removeGraph(k);
+//                    }
+//                }
+                for(const QString &key:(*vecHashMap[i]).keys())
+                {
+                    QCPGraph* graph = (*vecHashMap[i]).value(key);
+                    graph->setVisible(false);
+                }
+                vecMyCP[i]->replot();
+            }
+            qDebug()<<"关闭缺陷显示所花费时间:"<<qElapTimer.elapsed()<<"ms";
+        }
+        //2.根据窗口数量，循环刷新显示缺陷；在数据库中查询成功返回的槽函数中处理
+        //3.根据标志位决定是否显示
+    //        for(int i=0;i<CwindowDisp->windNum;i++)
+    //        {
+
+    //        }
+    }
+
     m_plotting = false;
     if(bupdateGrayScaleing)
         bupdateGrayScaleing = false;
+
     return 0;
 }
 
@@ -1200,6 +1390,7 @@ void MainWindow::handleQryProjectByIdResult(projectDataModel &onePrj)
     CprjConfig->outerDiameter = onePrj.outerDiameter;
     CprjConfig->dwallthickness = onePrj.dwallthickness;
     ui->prjNamelabel->setText("当前项目:"+onePrj.name);
+    m_openPrjId = onePrj.id;
     ui->openPrj->setEnabled(false);
     ui->closePrj->setEnabled(true);
 }
@@ -1254,6 +1445,34 @@ void MainWindow::handleDetectDefectComplete()
 {
     if(m_detectDefectingFlag)
         m_detectDefectingFlag=false;
+}
+
+void MainWindow::handleShowDefectsInAxial(QVector<DefectEvent> vecDefects, int openPrjId)
+{
+    Q_UNUSED(openPrjId)
+//    dataService::getInstance()->m_dataRwLock.lockForRead();
+    QElapsedTimer qElapTimer;
+    qElapTimer.start();
+    QVector<MyCustomPlot*>vecMyCP; //画板数组，作为函数入参
+    vecMyCP.append(ui->QcpText_1);
+    vecMyCP.append(QcpText_2);
+    vecMyCP.append(QcpText_3);
+    vecMyCP.append(QcpText_4);
+    QVector<QHash<QString,QCPGraph*>*>vecHashMap;
+    vecHashMap.append(&m_graphMap1);
+    vecHashMap.append(&m_graphMap2);
+    vecHashMap.append(&m_graphMap3);
+    vecHashMap.append(&m_graphMap4);
+    for(int i=0;i<CwindowDisp->windNum;i++)
+    {
+        for(DefectEvent& ev:vecDefects)
+        {
+            drawDefectEvent(vecMyCP[i],ev,*vecHashMap[i]);
+        }
+        vecMyCP[i]->replot();
+    }
+    qDebug()<<"绘制缺陷所花费时间:"<<qElapTimer.elapsed()<<"ms";
+//    dataService::getInstance()->m_dataRwLock.unlock();
 }
 
 void MainWindow::handleSig_wheelEvent(qint64 xLower, qint64 xUpper, qint64 yLower, qint64 yUpper)
@@ -1408,6 +1627,7 @@ void MainWindow::on_logout_triggered()
     CcurrentUserMod->permission = "";
     //画板恢复空白
     setMutiWindow(1);
+    QHash<QString,QCPGraph*>().swap(m_graphMap1);
     ui->QcpText_1->clearPlottables();    // 清除所有图形
     removePixmapItem(ui->QcpText_1);     //若存在灰度图像，清除灰度图像，保留追踪器相关item
     ui->QcpText_1->xAxis->setLabel("");  // 清除X轴标签
@@ -1438,6 +1658,7 @@ void MainWindow::on_logout_triggered()
     QVector<QMap<QString,int>>().swap(CprjConfig->fileNameBytesMapByBox);
     ui->openPrj->setEnabled(true);
     ui->closePrj->setEnabled(false);
+    m_openPrjId = -1;
     emit initalWinNum();
     ui->stackedWidget->hide();
 }
@@ -1543,6 +1764,10 @@ void MainWindow::on_closePrj_clicked()
     clearPlotboard(QcpText_2);
     clearPlotboard(QcpText_3);
     clearPlotboard(QcpText_4);
+    QHash<QString,QCPGraph*>().swap(m_graphMap1);
+    QHash<QString,QCPGraph*>().swap(m_graphMap2);
+    QHash<QString,QCPGraph*>().swap(m_graphMap3);
+    QHash<QString,QCPGraph*>().swap(m_graphMap4);
     CwindowDisp->bFirstPlot = true;
     CwindowDisp->startPos = 0;
     CwindowDisp->offset = 2000;
@@ -1560,6 +1785,7 @@ void MainWindow::on_closePrj_clicked()
 
     ui->openPrj->setEnabled(true);
     ui->closePrj->setEnabled(false);
+    m_openPrjId = -1;
 }
 
 void MainWindow::on_newPrj_clicked()
@@ -1646,26 +1872,13 @@ void MainWindow::on_detectDefect_triggered()
             msgBox::show("警告","未选择项目打开",2);
             return;
         }
-        //缺陷分析线程创立及触发操作
-        qDebug()<<"创建defectdetector所在线程为:"<<QThread::currentThreadId();
-        if(nullptr == m_defectdetectorWorker)
+
+        if(nullptr != m_defectdetectorWorker)
         {
-            QThread* thread = new QThread;
-            m_defectdetectorWorker = new defectdetector;
-            m_defectdetectorWorker->moveToThread(thread);
-
-            //连接信号槽
-            connect(this,&MainWindow::startDetectDefects,m_defectdetectorWorker,&defectdetector::handleStartDetectDefects);
-            connect(m_defectdetectorWorker,&defectdetector::detectDefectComplete,this,&MainWindow::handleDetectDefectComplete);
-            thread->start();
             //emit
+            m_defectdetectorWorker->setProjectId(m_openPrjId);
             emit startDetectDefects(CprjConfig->dInterval,CprjConfig->outerDiameter-2*CprjConfig->dwallthickness,*CprjConfig);
         }
-        else {
-            //emit
-            emit startDetectDefects(CprjConfig->dInterval,CprjConfig->outerDiameter-2*CprjConfig->dwallthickness,*CprjConfig);
-        }
-
 
         m_detectDefectingFlag = true;
         int colonPos = ui->prjNamelabel->text().indexOf(":");
@@ -1704,13 +1917,20 @@ void MainWindow::on_showDefect_triggered(bool checked)
     {
         msgBox::show("警告","未选择项目打开",2);
         ui->showDefect->setChecked(false);
+        m_showDefects = false;
         return;
     }
+    m_showDefects = checked;
     if(checked && !m_detectDefectingFlag)
     {
-
+        emit plotCacheDataRequestBybox(0);
+    }
+    else if(checked && m_detectDefectingFlag)
+    {
+        msgBox::show("提示","分析进行中，请稍后点击",1);
     }
     else {
+        emit plotCacheDataRequestBybox(0);
         qDebug()<<"关闭显示缺陷";
     }
 }

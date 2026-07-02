@@ -187,13 +187,19 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
         {
             return;
         }
+        int graphCnt = 0;//真实的曲线图计数
         //初始化创建追踪器并对已有追踪器更新
         int graphSize = this->graphCount();
         for(int i=0;i<graphSize;i++)
         {
-            if(i<m_tracers.size())
+            QCPGraph* graph = this->graph(i);
+            if(graph->objectName().size()==34)
             {
-                TracerInfo& oneTracer = m_tracers[i];
+                continue;
+            }
+            if(graphCnt<m_tracers.size())
+            {
+                TracerInfo& oneTracer = m_tracers[graphCnt];
                 QCPGraph* graph = this->graph(i);
                 if(graph && !graph->data()->isEmpty())
                 {
@@ -242,6 +248,7 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
                 }
                 m_tracers.append(oneTracer);
             }
+            graphCnt++;
         }
 
         if(false == m_leftPress)
@@ -255,7 +262,7 @@ void MyCustomPlot::mousePressEvent(QMouseEvent *event)
             int selectIndex = 0;
             double minDistance = std::numeric_limits<double>::max();
 
-            for(int i=0;i<graphSize;i++)
+            for(int i=0;i<graphCnt;i++)
             {
                 TracerInfo& oneTracer = m_tracers[i];
                 oneTracer.tracer->setGraphKey(x);

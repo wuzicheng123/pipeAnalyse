@@ -107,7 +107,7 @@ QSqlDatabase DatabasePool::createConnection(const QString &connectionName)
     //此处修改为odbc连接数据库
     QSqlDatabase db = QSqlDatabase::addDatabase(m_driver, connectionName);
 
-    QString dsn = QString("Driver={MySQL ODBC 8.4 Unicode Driver};SERVER=%1;"
+    QString dsn = QString("Driver={MySQL ODBC 9.7 Unicode Driver};SERVER=%1;"
                           "DATABASE=%2;UID=%3;"
                           "PWD=%4;").arg(m_host).arg(m_databaseName).arg(m_username).arg(m_password);
     db.setDatabaseName(dsn);

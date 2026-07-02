@@ -11,6 +11,8 @@ class databaseWorker : public QObject
     Q_OBJECT
 public:
     explicit databaseWorker(QObject *parent = nullptr);
+    //检查表是否存在
+    bool tableExists(QSqlQuery& query, const QString& tableName);
 
 signals:
     void loginResult(int id,QString name,QString password,QString permission);
@@ -24,6 +26,7 @@ signals:
     void showEditProject(int row,projectDataModel& onePrj);
     void showDeleteProject(int row);
     void showDetailProject(projectDataModel& onePrj);
+    void showDefectsInAxial(QVector<DefectEvent>vecDefects,int openPrjId);
 
 public slots:
     void handleLoginRequest(QString name,QString password);
@@ -36,6 +39,8 @@ public slots:
     void handleNewProjectRequest(projectDataModel& projectData);
     void handleEditProjectRequest(int row,projectDataModel& projectData);
     void handleDeleteProjectRequest(int row,int projectId);
+    void handleAddNewdefects(QVector<DefectEvent> resultBlockEvents, int currentPrjId, bool bfirst);
+    void handleQueryDefectsInAxial(int openPrjId,double x_start,double x_end,double y_start,double y_end);
 
 private:
 

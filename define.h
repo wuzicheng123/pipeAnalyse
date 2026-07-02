@@ -276,14 +276,17 @@ struct DefectCandidate{
 
 //聚合后的缺陷事件
 struct DefectEvent{
+    QString uuid;
+    QString typeStr;
+    QString defectStr;
     QVector<int> channels; //所有涉及的通道号
     double axialStart_mm;             // 轴向起始（最小）
     double axialEnd_mm;               // 轴向结束（最大）
     double axialLength_mm;            // 轴向长度
     int minChannel, maxChannel;       // 通道范围
     QVector<DefectCandidate> candidates; // 原始候选（用于形状分析）
-    DefectEvent() : axialStart_mm(DBL_MAX), axialEnd_mm(-1), axialLength_mm(0),
-                        minChannel(INT_MAX), maxChannel(-1) {}
+    DefectEvent() : uuid(""),typeStr(""),defectStr(""),axialStart_mm(DBL_MAX), axialEnd_mm(-1),
+        axialLength_mm(0),minChannel(INT_MAX), maxChannel(-1) {}
 };
 
 // 缺陷类型枚举
